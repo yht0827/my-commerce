@@ -26,8 +26,22 @@ resilience4j:
           - com.loopers.support.error.CoreException
 
   retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 300ms
+        retryExceptions:
+          - java.net.ConnectException
+          - java.net.SocketTimeoutException
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.ResourceAccessException
+        ignoreExceptions:
+          - org.springframework.web.client.HttpClientErrorException
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2.0
     instances:
       pgClient:
+        baseConfig: default
         maxAttempts: 3
         waitDuration: 300ms
         retryExceptions:

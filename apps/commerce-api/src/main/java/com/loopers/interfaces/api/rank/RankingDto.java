@@ -18,11 +18,15 @@ public record RankingDto() {
 
 		public record RankingRequest(
 			@DateTimeFormat(pattern = "yyyyMMdd") LocalDate date,
+			String period,
 			@PositiveOrZero Integer page,
 			@Positive Integer size
 		) {
 			public GetRankingQuery from(final String userId) {
-				return new GetRankingQuery(userId, this.date,
+				return new GetRankingQuery(
+					userId,
+					this.date,
+					this.period,
 					PageRequest.of(
 						page != null ? page : 0,
 						size != null ? size : 10

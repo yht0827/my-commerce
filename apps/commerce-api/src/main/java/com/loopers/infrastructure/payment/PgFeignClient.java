@@ -7,7 +7,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 
 import com.loopers.interfaces.api.ApiResponse;
 
-@FeignClient(name = "pgClient", url = "http://localhost:8082/api/v1/payments")
+@FeignClient(
+	name = "${clients.pg-simulator.name}",
+	url = "${clients.pg-simulator.url}",
+	path = "/pg/v1/payments"
+)
 public interface PgFeignClient {
 
 	@PostMapping

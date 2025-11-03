@@ -25,6 +25,12 @@ spring:
       - kafka.yml
       - logging.yml
       - monitoring.yml
+      - resilience.yml
+
+clients:
+  pg-simulator:
+    name: pgClient
+    url: http://localhost:8082
 
 springdoc:
   use-fqn: true

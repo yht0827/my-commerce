@@ -14,7 +14,7 @@ import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
 import com.loopers.config.event.ProductAggregationEvent;
-import com.loopers.domain.RankingService;
+import com.loopers.domain.metrics.RankingService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

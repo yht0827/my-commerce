@@ -6,8 +6,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.loopers.domain.AuditLogData;
-import com.loopers.domain.AuditLogService;
+import com.loopers.domain.event.AuditLogData;
+import com.loopers.domain.event.AuditLogService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

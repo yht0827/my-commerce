@@ -5,7 +5,7 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 import com.loopers.config.event.ProductAggregationEvent;
-import com.loopers.domain.ProductMetricData;
+import com.loopers.domain.metrics.ProductMetricData;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
