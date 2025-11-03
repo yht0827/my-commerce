@@ -1,22 +1,24 @@
-# Loopers Template (Spring + Java)
-Loopers 에서 제공하는 스프링 자바 템플릿 프로젝트입니다.
+# 프로젝트 개요
 
-## Getting Started
-현재 프로젝트 안정성 및 유지보수성 등을 위해 아래와 같은 장치를 운용하고 있습니다. 이에 아래 명령어를 통해 프로젝트의 기반을 설치해주세요.
-### Environment
-`local` 프로필로 동작할 수 있도록, 필요 인프라를 `docker-compose` 로 제공합니다.
-```shell
-docker-compose -f ./docker/infra-compose.yml up
-```
-### Monitoring
-`local` 환경에서 모니터링을 할 수 있도록, `docker-compose` 를 통해 `prometheus` 와 `grafana` 를 제공합니다.
+백엔드 핵심 역량 강화를 위한 이커머스 시스템 구축
 
-애플리케이션 실행 이후, **http://localhost:3000** 로 접속해, admin/admin 계정으로 로그인하여 확인하실 수 있습니다.
-```shell
-docker-compose -f ./docker/monitoring-compose.yml up
-```
+## 주요 학습 목표
+
+- 테스트 자동화 및 TDD
+- 동시성 제어 (Pessimistic/Optimistic Lock)
+- 트랜잭션 관리 및 격리 수준
+- 캐싱 전략 (Local/Global Cache)
+- 이벤트 기반의 비동기 처리 및 시스템 결합도 완화
+
+## 개발환경
+
+- Language: Java 21
+- Framework: Spring Boot 3.4.4
+- DB ORM: JPA
+- Test: JUnit 5 + AssertJ
 
 ## About Multi-Module Project
+
 본 프로젝트는 멀티 모듈 프로젝트로 구성되어 있습니다. 각 모듈의 위계 및 역할을 분명히 하고, 아래와 같은 규칙을 적용합니다.
 
 - apps : 각 모듈은 실행가능한 **SpringBootApplication** 을 의미합니다.
@@ -27,14 +29,18 @@ docker-compose -f ./docker/monitoring-compose.yml up
 Root
 ├── apps ( spring-applications )
 │   └── 📦 commerce-api
+│   └── 📦 commerce-streamer
 │   └── 📦 pg-simulator
 ├── modules ( reusable-configurations )
-│   └── 📦 jpa
-│   └── 📦 redis
+│   └── 📦 batch
 │   └── 📦 cache
 │   └── 📦 feign
+│   └── 📦 jpa
+│   └── 📦 kafka
+│   └── 📦 redis
 │   └── 📦 resilience
 └── supports ( add-ons )
-    ├── 📦 monitoring
-    └── 📦 logging
+    ├── 📦 jackson
+    ├── 📦 logging
+    └── 📦 monitoring
 ```
