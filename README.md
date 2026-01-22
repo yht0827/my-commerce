@@ -73,21 +73,21 @@
 
 ```
 Root
-├── apps
-│   ├── commerce-api        # REST API 서버
-│   ├── commerce-batch      # 배치 처리
-│   ├── commerce-streamer   # 스트리밍 처리
-│   └── pg-simulator        # PG 시뮬레이터
+├── apps ( spring-applications )
+│   ├── 📦 commerce-api        # REST API 서버
+│   ├── 📦 commerce-batch      # 배치 처리
+│   ├── 📦 commerce-streamer   # 스트리밍 처리
+│   └── 📦 pg-simulator        # PG 시뮬레이터
 │
-├── modules
-│   ├── jpa                 # JPA 설정
-│   ├── kafka               # Kafka 설정
-│   └── redis               # Redis 설정
+├── modules ( reusable-configurations )
+│   ├── 📦 jpa                 # JPA 설정
+│   ├── 📦 kafka               # Kafka 설정
+│   └── 📦 redis               # Redis 설정
 │
-└── supports
-    ├── jackson             # JSON 직렬화
-    ├── logging             # 로깅
-    └── monitoring          # 모니터링
+└── supports ( add-ons )
+    ├── 📦 jackson             # JSON 직렬화
+    ├── 📦 logging             # 로깅
+    └── 📦 monitoring          # 모니터링
 ```
 
 ---
