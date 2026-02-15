@@ -17,6 +17,7 @@ import com.loopers.domain.user.Gender;
 import com.loopers.domain.user.User;
 import com.loopers.infrastructure.user.UserJpaRepository;
 import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
 import com.loopers.utils.DatabaseCleanUp;
 
 @SpringBootTest
@@ -42,7 +43,7 @@ public class UserIntegrationTest {
     }
 
     private CreateUserCommand createTestCommand() {
-        return new CreateUserCommand(TEST_USER_ID, TEST_EMAIL, TEST_BIRTHDAY, "M");
+        return new CreateUserCommand(TEST_USER_ID, TEST_EMAIL, TEST_BIRTHDAY, "MALE");
     }
 
     private void assertUserInfoEquals(UserResult info) {
@@ -91,7 +92,11 @@ public class UserIntegrationTest {
                 String nonExistentUserId = "nonExistent";
 
                 // act and assert
-                assertThrows(CoreException.class, () -> userApplicationService.getUser(GetUserQuery.of(nonExistentUserId)));
+                CoreException result = assertThrows(
+                    CoreException.class,
+                    () -> userApplicationService.getUser(GetUserQuery.of(nonExistentUserId))
+                );
+                assertThat(result.getErrorType()).isEqualTo(ErrorType.UNAUTHORIZED);
             }
         }
     }
@@ -130,7 +135,8 @@ public class UserIntegrationTest {
                 CreateUserCommand duplicate = createTestCommand();
 
                 // act and assert
-                assertThrows(CoreException.class, () -> userApplicationService.register(duplicate));
+                CoreException result = assertThrows(CoreException.class, () -> userApplicationService.register(duplicate));
+                assertThat(result.getErrorType()).isEqualTo(ErrorType.CONFLICT);
             }
         }
     }

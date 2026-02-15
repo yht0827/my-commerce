@@ -1,7 +1,6 @@
 package com.loopers.interfaces.api.rank;
 
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -9,6 +8,7 @@ import com.loopers.application.ranking.GetRankingQuery;
 import com.loopers.application.ranking.RankingPageResult;
 import com.loopers.application.ranking.RankingUseCase;
 import com.loopers.interfaces.api.common.ApiResponse;
+import com.loopers.interfaces.api.common.CurrentUserId;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ public class RankingV1Controller implements RankingV1ApiSpec {
 
 	@GetMapping
 	@Override
-	public ApiResponse<RankingDto.V1.RankingPageResponse> getRanking(@RequestHeader("X-USER-ID") final String userId,
+	public ApiResponse<RankingDto.V1.RankingPageResponse> getRanking(@CurrentUserId final String userId,
 		@Valid final RankingDto.V1.RankingRequest request) {
 
 		GetRankingQuery query = request.from(userId);

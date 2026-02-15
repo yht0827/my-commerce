@@ -126,6 +126,9 @@ public class ApiControllerAdvice {
 	public ResponseEntity<ApiResponse<?>> handleBadRequest(MissingRequestHeaderException e) {
 		String name = e.getHeaderName();
 		String message = String.format("필수 요청 헤더 '%s'가 누락되었습니다.", name);
+		if ("X-USER-ID".equalsIgnoreCase(name)) {
+			return failureResponse(ErrorType.UNAUTHORIZED, message);
+		}
 		return failureResponse(ErrorType.BAD_REQUEST, message);
 	}
 

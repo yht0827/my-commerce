@@ -3,6 +3,9 @@ package com.loopers.domain.user;
 import static com.loopers.support.error.ErrorMessage.*;
 import static com.loopers.support.error.ErrorType.*;
 
+import java.sql.SQLIntegrityConstraintViolationException;
+import java.sql.SQLException;
+
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 
@@ -24,36 +27,51 @@ public class UserService {
 			.gender(Gender.of(gender))
 			.build();
 
-		ensureCreatePolicy(user);
+		validateCreatePolicy(user);
 
 		try {
 			return userRepository.save(user);
 		} catch (DataIntegrityViolationException e) {
-			throw new CoreException(BAD_REQUEST, USER_ID_ALREADY_EXISTS.getMessage());
+			if (isDuplicateKeyException(e)) {
+				throw new CoreException(CONFLICT);
+			}
+			throw e;
 		}
 	}
 
 	public User findByUserId(final UserId userId) {
 		return userRepository.findByUserId(userId)
-			.orElseThrow(() -> new CoreException(NOT_FOUND, USER_NOT_FOUND.format(userId)));
+			.orElseThrow(() -> new CoreException(NOT_FOUND, USER_NOT_FOUND.format(userId.getUserId())));
+	}
+
+	private void validateCreatePolicy(final User user) {
+		validateUniqueUserId(user.getUserId());
+		validateUniqueEmail(user.getEmail());
 	}
 
 	private void validateUniqueUserId(final UserId userId) {
 		boolean isExisted = userRepository.existsByUserId(userId);
 		if (isExisted) {
-			throw new CoreException(BAD_REQUEST, USER_ID_ALREADY_EXISTS.getMessage());
+			throw new CoreException(CONFLICT, USER_ID_ALREADY_EXISTS.getMessage());
 		}
 	}
 
 	private void validateUniqueEmail(final Email email) {
 		boolean isExisted = userRepository.existsByEmail(email);
 		if (isExisted) {
-			throw new CoreException(BAD_REQUEST, EMAIL_ALREADY_EXISTS.getMessage());
+			throw new CoreException(CONFLICT, EMAIL_ALREADY_EXISTS.getMessage());
 		}
 	}
 
-	private void ensureCreatePolicy(final User user) {
-		validateUniqueUserId(user.getUserId());
-		validateUniqueEmail(user.getEmail());
+	private boolean isDuplicateKeyException(final DataIntegrityViolationException e) {
+		Throwable mostSpecificCause = e.getMostSpecificCause();
+		if (mostSpecificCause instanceof SQLIntegrityConstraintViolationException) {
+			return true;
+		}
+		if (mostSpecificCause instanceof SQLException sqlException) {
+			String sqlState = sqlException.getSQLState();
+			return sqlState != null && sqlState.startsWith("23");
+		}
+		return false;
 	}
 }

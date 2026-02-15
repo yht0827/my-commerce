@@ -82,7 +82,7 @@ public class RedisTest {
 			assertThat(user.getEmail().getEmail()).isEqualTo("hong@example.com");
 			assertThat(user.getUserId().getUserId()).isEqualTo("testuser2");
 			assertThat(user.getBirthday().getBirthday()).isEqualTo("1990-01-01");
-			assertThat(user.getGender().name()).isEqualTo("M");
+			assertThat(user.getGender().name()).isEqualTo("MALE");
 		}
 	}
 

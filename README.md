@@ -8,6 +8,7 @@
 - [기술 스택](#기술-스택)
 - [시스템 아키텍처](#시스템-아키텍처)
 - [모듈 구조](#모듈-구조)
+- [설계 문서](#설계-문서)
 - [시작하기](#시작하기)
 - [학습 목표](#학습-목표)
 
@@ -87,6 +88,14 @@ Root
     └── 📦 monitoring          # 모니터링
 ```
 
+---
+
+## 설계 문서
+
+- [01 Requirements](docs/01-requirements.md)
+- [02 Sequence Diagrams](docs/02-sequence-diagrams.md)
+- [03 Class Diagrams](docs/03-class-diagrams.md)
+- [04 ERD](docs/04-erd.md)
 ---
 
 ## 시작하기

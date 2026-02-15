@@ -4,6 +4,8 @@ import static com.loopers.support.error.ErrorMessage.*;
 import static com.loopers.support.error.ErrorType.*;
 
 import java.io.Serializable;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.regex.Pattern;
 
 import com.loopers.support.error.CoreException;
@@ -25,10 +27,27 @@ public class Birthday implements Serializable {
 	private String birthday;
 
 	public Birthday(String birthday) {
-		if (birthday == null || !BIRTHDAY_PATTERN.matcher(birthday).matches()) {
+		if (birthday == null) {
 			throw new CoreException(BAD_REQUEST, BIRTHDAY_INVALID_FORMAT.getMessage());
 		}
-		this.birthday = birthday;
+
+		String normalizedBirthday = birthday.trim();
+		if (!BIRTHDAY_PATTERN.matcher(normalizedBirthday).matches()) {
+			throw new CoreException(BAD_REQUEST, BIRTHDAY_INVALID_FORMAT.getMessage());
+		}
+
+		LocalDate parsedBirthday;
+		try {
+			parsedBirthday = LocalDate.parse(normalizedBirthday);
+		} catch (DateTimeParseException e) {
+			throw new CoreException(BAD_REQUEST, BIRTHDAY_INVALID_FORMAT.getMessage());
+		}
+
+		if (parsedBirthday.isAfter(LocalDate.now())) {
+			throw new CoreException(BAD_REQUEST, BIRTHDAY_CANNOT_BE_FUTURE.getMessage());
+		}
+
+		this.birthday = normalizedBirthday;
 	}
 
 	public static Birthday of(String birthday) {
