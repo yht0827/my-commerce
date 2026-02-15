@@ -29,7 +29,7 @@ public class UserTest {
 				.userId(new UserId(userId))
 				.email(new Email(email))
 				.birthday(new Birthday(birthday))
-				.gender(Gender.M)
+				.gender(Gender.MALE)
 				.build();
 
 			// assert
@@ -39,7 +39,7 @@ public class UserTest {
 					assertThat(u.getUserId().getUserId()).isEqualTo(userId);
 					assertThat(u.getEmail().getEmail()).isEqualTo(email);
 					assertThat(u.getBirthday().getBirthday()).isEqualTo(birthday);
-					assertThat(u.getGender()).isEqualTo(Gender.M);
+					assertThat(u.getGender()).isEqualTo(Gender.MALE);
 				});
 		}
 
@@ -57,7 +57,7 @@ public class UserTest {
 					.userId(new UserId(invalidUserId))
 					.email(new Email(email))
 					.birthday(new Birthday(birthday))
-					.gender(Gender.M)
+					.gender(Gender.MALE)
 					.build()
 			);
 
@@ -79,7 +79,7 @@ public class UserTest {
 					.userId(new UserId(userId))
 					.email(new Email(invalidEmail))
 					.birthday(new Birthday(birthday))
-					.gender(Gender.M)
+					.gender(Gender.MALE)
 					.build()
 			);
 
@@ -101,7 +101,7 @@ public class UserTest {
 					.userId(new UserId(userId))
 					.email(new Email(email))
 					.birthday(new Birthday(invalidBirthday))
-					.gender(Gender.M)
+					.gender(Gender.MALE)
 					.build()
 			);
 

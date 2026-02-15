@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.loopers.application.ranking.GetRankingQuery;
 import com.loopers.application.ranking.RankingPageResult;
 import com.loopers.application.ranking.RankingUseCase;
-import com.loopers.interfaces.api.ApiResponse;
+import com.loopers.interfaces.api.common.ApiResponse;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

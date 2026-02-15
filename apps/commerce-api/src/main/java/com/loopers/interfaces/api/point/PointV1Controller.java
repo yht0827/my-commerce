@@ -11,7 +11,7 @@ import com.loopers.application.point.ChargePointCommand;
 import com.loopers.application.point.GetPointQuery;
 import com.loopers.application.point.PointResult;
 import com.loopers.application.point.PointUseCase;
-import com.loopers.interfaces.api.ApiResponse;
+import com.loopers.interfaces.api.common.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 

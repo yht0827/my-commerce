@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.loopers.application.like.LikeFacade;
 import com.loopers.application.like.LikeResult;
-import com.loopers.interfaces.api.ApiResponse;
+import com.loopers.interfaces.api.common.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 

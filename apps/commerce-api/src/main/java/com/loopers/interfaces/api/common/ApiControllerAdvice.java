@@ -1,4 +1,4 @@
-package com.loopers.interfaces.api;
+package com.loopers.interfaces.api.common;
 
 import java.util.Arrays;
 import java.util.regex.Matcher;

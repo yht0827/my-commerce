@@ -11,7 +11,7 @@ import lombok.Getter;
 
 @Getter
 public enum Gender {
-	M, F;
+	MALE, FEMALE, OTHER;
 
 	public static Gender of(String value) {
 		return Arrays.stream(Gender.values())

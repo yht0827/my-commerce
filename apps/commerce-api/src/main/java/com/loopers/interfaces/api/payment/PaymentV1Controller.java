@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.loopers.application.payment.PaymentCommand;
 import com.loopers.application.payment.PaymentFacade;
 import com.loopers.application.payment.PaymentResult;
-import com.loopers.interfaces.api.ApiResponse;
+import com.loopers.interfaces.api.common.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 

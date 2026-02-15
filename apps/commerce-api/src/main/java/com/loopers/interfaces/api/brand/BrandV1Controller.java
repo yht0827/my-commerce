@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.loopers.application.brand.BrandFacade;
 import com.loopers.application.brand.BrandResult;
 import com.loopers.domain.brand.BrandId;
-import com.loopers.interfaces.api.ApiResponse;
+import com.loopers.interfaces.api.common.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 

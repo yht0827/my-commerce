@@ -4,22 +4,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.loopers.domain.user.User;
-import com.loopers.domain.user.UserDomainService;
-import com.loopers.domain.user.UserFinder;
 import com.loopers.domain.user.UserId;
+import com.loopers.domain.user.UserService;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class UserService implements UserUseCase {
-	private final UserDomainService userDomainService;
-	private final UserFinder userFinder;
+public class UserApplicationService {
+	private final UserService userService;
 
-	@Override
-	public UserResult createUser(final CreateUserCommand command) {
-		User savedUser = userDomainService.createUser(
+	public UserResult register(final CreateUserCommand command) {
+		User savedUser = userService.register(
 			command.userId(),
 			command.email(),
 			command.birthday(),
@@ -28,12 +25,11 @@ public class UserService implements UserUseCase {
 		return UserResult.from(savedUser);
 	}
 
-	@Override
 	@Transactional(readOnly = true)
 	public UserResult getUser(final GetUserQuery query) {
 		final UserId userId = UserId.of(query.userId());
 
-		User user = userFinder.findByUserId(userId);
+		User user = userService.findByUserId(userId);
 
 		return UserResult.from(user);
 	}

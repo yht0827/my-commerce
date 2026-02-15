@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 import com.loopers.domain.payment.PaymentInfo;
 import com.loopers.domain.payment.PgClient;
 import com.loopers.domain.payment.TransactionStatus;
-import com.loopers.interfaces.api.ApiResponse;
+import com.loopers.interfaces.api.common.ApiResponse;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
