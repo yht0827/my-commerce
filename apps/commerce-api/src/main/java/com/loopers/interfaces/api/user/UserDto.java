@@ -29,14 +29,15 @@ public record UserDto() {
 			}
 		}
 
-		public record UserResponse(Long id, String userId, String email, String birthday, String gender) {
+		public record UserResponse(Long id, String userId, String email, String birthday, String gender, String createdAt) {
 			public static UserResponse from(final UserResult info) {
 				return new UserResponse(
 					info.id(),
 					info.userId(),
 					info.email(),
 					info.birthday(),
-					info.gender()
+					info.gender(),
+					info.createdAt()
 				);
 			}
 		}

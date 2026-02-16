@@ -52,7 +52,8 @@ public class UserIntegrationTest {
             () -> assertThat(info.userId()).isEqualTo(TEST_USER_ID),
             () -> assertThat(info.email()).isEqualTo(TEST_EMAIL),
             () -> assertThat(info.birthday()).isEqualTo(TEST_BIRTHDAY),
-            () -> assertThat(info.gender()).isEqualTo(Gender.MALE.name())
+            () -> assertThat(info.gender()).isEqualTo(Gender.MALE.name()),
+            () -> assertThat(info.createdAt()).isNotBlank()
         );
     }
 

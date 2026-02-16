@@ -5,8 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.loopers.domain.point.Balance;
 import com.loopers.domain.point.Point;
-import com.loopers.domain.point.PointDomainService;
-import com.loopers.domain.point.PointFinder;
+import com.loopers.domain.point.PointService;
 import com.loopers.domain.user.UserId;
 
 import lombok.RequiredArgsConstructor;
@@ -14,14 +13,12 @@ import lombok.RequiredArgsConstructor;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class PointService implements PointUseCase {
-	private final PointDomainService pointDomainService;
-	private final PointFinder pointFinder;
+public class PointApplicationService {
+	private final PointService pointService;
 
-	@Override
 	public PointResult chargePoint(final ChargePointCommand command) {
 
-		Point point = pointDomainService.charge(
+		Point point = pointService.charge(
 			UserId.of(command.userId()),
 			Balance.of(command.balance())
 		);
@@ -29,12 +26,11 @@ public class PointService implements PointUseCase {
 		return PointResult.from(point);
 	}
 
-	@Override
 	@Transactional(readOnly = true)
 	public PointResult getPoint(final GetPointQuery query) {
 		final UserId userId = UserId.of(query.userId());
 
-		Point point = pointFinder.getPoint(userId);
+		Point point = pointService.findByUserId(userId);
 		return PointResult.from(point);
 	}
 }

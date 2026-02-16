@@ -4,7 +4,7 @@
 
 ## 목차
 
-- [회원 (Member)](#회원-member)
+- [회원 (User)](#회원-user)
 - [포인트 (Point)](#포인트-point)
 - [상품 (Product)](#상품-product)
 - [브랜드 (Brand)](#브랜드-brand)
@@ -13,7 +13,7 @@
 
 ---
 
-## 회원 (Member)
+## 회원 (User)
 
 ### 회원가입
 
@@ -56,7 +56,7 @@ sequenceDiagram
                 else 이메일 사용 가능
                     Server->>DB: 회원 정보 저장
                     DB-->>Server: 저장 완료
-                    Server-->>Client: 201 Created (회원 정보)
+                    Server-->>Client: 201 Created (id, userId, email, birthday, gender, createdAt)
                     Client-->>User: 회원가입 완료, 로그인 페이지로 이동
                 end
             end
@@ -95,7 +95,7 @@ sequenceDiagram
             Client-->>User: 회원 정보 없음 안내
         else 사용자 존재
             DB-->>Server: 사용자 정보
-            Server-->>Client: 200 OK (회원 정보)
+            Server-->>Client: 200 OK (id, userId, email, birthday, gender, createdAt)
             Client-->>User: 마이페이지 화면 표시
         end
     end

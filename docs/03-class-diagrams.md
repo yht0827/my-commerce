@@ -5,7 +5,7 @@
 ## 목차
 
 - [전체 도메인 구조](#전체-도메인-구조)
-- [회원 (Member)](#회원-member)
+- [회원 (User)](#회원-user)
 - [포인트 (Point)](#포인트-point)
 - [상품 (Product)](#상품-product)
 - [브랜드 (Brand)](#브랜드-brand)
@@ -20,10 +20,10 @@
 classDiagram
     direction TB
 
-    Member "1" --> "*" Point : has
-    Member "1" --> "*" PointHistory : has
-    Member "1" --> "*" Like : has
-    Member "1" --> "*" Order : places
+    User "1" --> "*" Point : has
+    User "1" --> "*" PointHistory : has
+    User "1" --> "*" Like : has
+    User "1" --> "*" Order : places
 
     Brand "1" --> "*" Product : owns
     Product "1" --> "*" Like : receives
@@ -36,20 +36,19 @@ classDiagram
 
 ---
 
-## 회원 (Member)
+## 회원 (User)
 
 ```mermaid
 classDiagram
-    class Member {
+    class User {
         -Long id
-        -String memberId
-        -String email
+        -UserId userId
+        -Email email
+        -Birthday birthday
         -Gender gender
-        -LocalDate birthDate
-        -LocalDateTime createdAt
-        -LocalDateTime updatedAt
-        +register(command) Member
-        +getInfo() MemberInfo
+        -ZonedDateTime createdAt
+        -ZonedDateTime updatedAt
+        +create(userId, email, birthday, gender) User
     }
 
     class Gender {
@@ -59,34 +58,34 @@ classDiagram
         OTHER
     }
 
-    class MemberInfo {
+    class UserResult {
         <<DTO>>
-        +String memberId
+        +Long id
+        +String userId
         +String email
-        +Gender gender
-        +LocalDate birthDate
-        +LocalDateTime createdAt
+        +String birthday
+        +String gender
+        +String createdAt
     }
 
-    class MemberRepository {
+    class UserRepository {
         <<interface>>
-        +save(member) Member
-        +findByMemberId(memberId) Optional~Member~
-        +findByEmail(email) Optional~Member~
-        +existsByMemberId(memberId) boolean
+        +save(user) User
+        +findByUserId(userId) Optional~User~
+        +existsByUserId(userId) boolean
         +existsByEmail(email) boolean
     }
 
-    class MemberService {
-        -MemberRepository memberRepository
-        +register(command) MemberInfo
-        +getMemberInfo(memberId) MemberInfo
+    class UserService {
+        -UserRepository userRepository
+        +register(userId, email, birthday, gender) User
+        +findByUserId(userId) User
     }
 
-    Member --> Gender
-    Member ..> MemberInfo : creates
-    MemberService --> MemberRepository
-    MemberService --> Member
+    User --> Gender
+    User ..> UserResult : creates
+    UserService --> UserRepository
+    UserService --> User
 ```
 
 ---
@@ -97,7 +96,7 @@ classDiagram
 classDiagram
     class Point {
         -Long id
-        -Long memberId
+        -Long userId
         -Long balance
         -LocalDateTime updatedAt
         +charge(amount) void
@@ -107,7 +106,7 @@ classDiagram
 
     class PointHistory {
         -Long id
-        -Long memberId
+        -Long userId
         -Long amount
         -PointType type
         -String description
@@ -138,22 +137,22 @@ classDiagram
     class PointRepository {
         <<interface>>
         +save(point) Point
-        +findByMemberId(memberId) Optional~Point~
-        +findByMemberIdWithLock(memberId) Optional~Point~
+        +findByUserId(userId) Optional~Point~
+        +findByUserIdWithLock(userId) Optional~Point~
     }
 
     class PointHistoryRepository {
         <<interface>>
         +save(history) PointHistory
-        +findByMemberIdOrderByCreatedAtDesc(memberId) List~PointHistory~
+        +findByUserIdOrderByCreatedAtDesc(userId) List~PointHistory~
     }
 
     class PointService {
         -PointRepository pointRepository
         -PointHistoryRepository historyRepository
-        +charge(memberId, amount) PointInfo
-        +use(memberId, amount) void
-        +getPointInfo(memberId) PointInfo
+        +charge(userId, amount) PointInfo
+        +use(userId, amount) void
+        +getPointInfo(userId) PointInfo
     }
 
     Point --> PointHistory : records
@@ -302,7 +301,7 @@ classDiagram
 classDiagram
     class Like {
         -Long id
-        -Long memberId
+        -Long userId
         -Long productId
         -LocalDateTime createdAt
     }
@@ -319,18 +318,18 @@ classDiagram
         <<interface>>
         +save(like) Like
         +delete(like) void
-        +findByMemberIdAndProductId(memberId, productId) Optional~Like~
-        +findByMemberIdOrderByCreatedAtDesc(memberId) List~Like~
-        +existsByMemberIdAndProductId(memberId, productId) boolean
+        +findByUserIdAndProductId(userId, productId) Optional~Like~
+        +findByUserIdOrderByCreatedAtDesc(userId) List~Like~
+        +existsByUserIdAndProductId(userId, productId) boolean
     }
 
     class LikeService {
         -LikeRepository likeRepository
         -ProductRepository productRepository
-        -MemberRepository memberRepository
-        +addLike(memberId, productId) void
-        +removeLike(memberId, productId) void
-        +getLikedProducts(memberId) List~LikeInfo~
+        -UserRepository userRepository
+        +addLike(userId, productId) void
+        +removeLike(userId, productId) void
+        +getLikedProducts(userId) List~LikeInfo~
     }
 
     Like ..> LikeInfo : maps to
@@ -346,13 +345,13 @@ classDiagram
 classDiagram
     class Order {
         -Long id
-        -Long memberId
+        -Long userId
         -String orderNumber
         -OrderStatus status
         -Long totalAmount
         -LocalDateTime orderedAt
         -LocalDateTime updatedAt
-        +create(member, items) Order
+        +create(user, items) Order
         +cancel() void
         +complete() void
     }
@@ -399,7 +398,7 @@ classDiagram
 
     class OrderCreateCommand {
         <<DTO>>
-        +String memberId
+        +String userId
         +List~OrderItemCommand~ items
     }
 
@@ -424,7 +423,7 @@ classDiagram
         <<interface>>
         +save(order) Order
         +findById(id) Optional~Order~
-        +findByMemberIdOrderByOrderedAtDesc(memberId) List~Order~
+        +findByUserIdOrderByOrderedAtDesc(userId) List~Order~
     }
 
     class OrderItemRepository {
@@ -447,8 +446,8 @@ classDiagram
         -StockService stockService
         -PointService pointService
         +createOrder(command) OrderInfo
-        +getOrders(memberId) List~OrderInfo~
-        +getOrderDetail(memberId, orderId) OrderInfo
+        +getOrders(userId) List~OrderInfo~
+        +getOrderDetail(userId, orderId) OrderInfo
     }
 
     Order --> OrderStatus
@@ -497,35 +496,35 @@ classDiagram
     Service --> Repository : uses
     Repository --> Entity : manages
 
-    class MemberController
+    class UserController
     class ProductController
     class OrderController
 
-    class MemberService
+    class UserService
     class ProductService
     class OrderService
 
-    class MemberRepository
+    class UserRepository
     class ProductRepository
     class OrderRepository
 
-    class Member
+    class User
     class Product
     class Order
 
-    MemberController ..|> Controller
+    UserController ..|> Controller
     ProductController ..|> Controller
     OrderController ..|> Controller
 
-    MemberService ..|> Service
+    UserService ..|> Service
     ProductService ..|> Service
     OrderService ..|> Service
 
-    MemberRepository ..|> Repository
+    UserRepository ..|> Repository
     ProductRepository ..|> Repository
     OrderRepository ..|> Repository
 
-    Member ..|> Entity
+    User ..|> Entity
     Product ..|> Entity
     Order ..|> Entity
 ```

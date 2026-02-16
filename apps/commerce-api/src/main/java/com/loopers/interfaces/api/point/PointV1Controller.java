@@ -8,11 +8,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.loopers.application.point.ChargePointCommand;
 import com.loopers.application.point.GetPointQuery;
+import com.loopers.application.point.PointApplicationService;
 import com.loopers.application.point.PointResult;
-import com.loopers.application.point.PointUseCase;
 import com.loopers.interfaces.api.common.ApiResponse;
 import com.loopers.interfaces.api.common.CurrentUserId;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
@@ -20,13 +21,16 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/points")
 public class PointV1Controller implements PointV1ApiSpec {
 
-	private final PointUseCase pointUseCase;
+	private final PointApplicationService pointApplicationService;
 
 	@PostMapping("/charge")
 	@Override
-	public ApiResponse<PointDto.V1.BalanceResponse> chargePoint(@RequestBody final PointDto.V1.ChargePointRequest request) {
-		ChargePointCommand command = request.toCommand();
-		PointResult pointResult = pointUseCase.chargePoint(command);
+	public ApiResponse<PointDto.V1.BalanceResponse> chargePoint(
+		@CurrentUserId final String userId,
+		@Valid @RequestBody final PointDto.V1.ChargePointRequest request
+	) {
+		ChargePointCommand command = request.toCommand(userId);
+		PointResult pointResult = pointApplicationService.chargePoint(command);
 		PointDto.V1.BalanceResponse response = PointDto.V1.BalanceResponse.from(pointResult);
 		return ApiResponse.success(response);
 	}
@@ -35,7 +39,7 @@ public class PointV1Controller implements PointV1ApiSpec {
 	@Override
 	public ApiResponse<PointDto.V1.BalanceResponse> getPoint(@CurrentUserId final String userId) {
 		GetPointQuery query = GetPointQuery.of(userId);
-		PointResult pointResult = pointUseCase.getPoint(query);
+		PointResult pointResult = pointApplicationService.getPoint(query);
 		PointDto.V1.BalanceResponse response = PointDto.V1.BalanceResponse.from(pointResult);
 		return ApiResponse.success(response);
 	}

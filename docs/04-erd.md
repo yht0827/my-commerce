@@ -6,7 +6,7 @@
 
 - [전체 ERD](#전체-erd)
 - [테이블 상세](#테이블-상세)
-  - [member](#member)
+  - [users](#users)
   - [point](#point)
   - [point_history](#point_history)
   - [brand](#brand)
@@ -23,10 +23,10 @@
 
 ```mermaid
 erDiagram
-    member ||--o{ point : has
-    member ||--o{ point_history : has
-    member ||--o{ likes : creates
-    member ||--o{ orders : places
+    users ||--o{ point : has
+    users ||--o{ point_history : has
+    users ||--o{ likes : creates
+    users ||--o{ orders : places
 
     brand ||--o{ product : owns
 
@@ -37,26 +37,27 @@ erDiagram
     orders ||--o{ order_item : contains
     orders ||--|| payment : has
 
-    member {
+    users {
         bigint id PK
-        varchar member_id UK "사용자 ID"
+        varchar user_id UK "사용자 ID"
         varchar email UK "이메일"
         varchar gender "성별 (MALE/FEMALE/OTHER)"
-        date birth_date "생년월일"
+        varchar birthday "생년월일 (yyyy-MM-dd)"
         datetime created_at "가입일시"
         datetime updated_at "수정일시"
+        datetime deleted_at "삭제일시(소프트 삭제)"
     }
 
     point {
         bigint id PK
-        bigint member_id FK,UK "회원 ID"
+        varchar user_id FK,UK "사용자 ID"
         bigint balance "잔액"
         datetime updated_at "수정일시"
     }
 
     point_history {
         bigint id PK
-        bigint member_id FK "회원 ID"
+        varchar user_id FK "사용자 ID"
         bigint amount "금액"
         varchar type "유형 (CHARGE/USE/REFUND)"
         varchar description "설명"
@@ -93,14 +94,14 @@ erDiagram
 
     likes {
         bigint id PK
-        bigint member_id FK "회원 ID"
+        varchar user_id FK "사용자 ID"
         bigint product_id FK "상품 ID"
         datetime created_at "생성일시"
     }
 
     orders {
         bigint id PK
-        bigint member_id FK "회원 ID"
+        varchar user_id FK "사용자 ID"
         varchar order_number UK "주문번호"
         varchar status "상태 (PENDING/PAID/COMPLETED/CANCELLED)"
         bigint total_amount "총 금액"
@@ -132,23 +133,24 @@ erDiagram
 
 ## 테이블 상세
 
-### member
+### users
 
 > 회원 정보 테이블
 
 | 컬럼명 | 타입 | 제약조건 | 설명 |
 |--------|------|----------|------|
 | id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
-| member_id | VARCHAR(20) | UK, NOT NULL | 사용자 ID |
-| email | VARCHAR(100) | UK, NOT NULL | 이메일 |
-| gender | VARCHAR(10) | NOT NULL | 성별 (MALE/FEMALE/OTHER) |
-| birth_date | DATE | NOT NULL | 생년월일 |
-| created_at | DATETIME | NOT NULL | 가입일시 |
-| updated_at | DATETIME | NOT NULL | 수정일시 |
+| user_id | VARCHAR(20) | UK, NOT NULL | 사용자 ID |
+| email | VARCHAR(255) | UK, NOT NULL | 이메일 |
+| gender | VARCHAR(20) | NOT NULL | 성별 (MALE/FEMALE/OTHER) |
+| birthday | VARCHAR(10) | NOT NULL | 생년월일 (`yyyy-MM-dd`) |
+| created_at | DATETIME(6) | NOT NULL | 가입일시 |
+| updated_at | DATETIME(6) | NOT NULL | 수정일시 |
+| deleted_at | DATETIME(6) | NULL | 삭제일시(소프트 삭제) |
 
 **인덱스**
-- `uk_member_member_id` (UNIQUE): member_id
-- `uk_member_email` (UNIQUE): email
+- `uk_users_user_id` (UNIQUE): user_id
+- `uk_users_email` (UNIQUE): email
 
 ---
 
@@ -159,15 +161,15 @@ erDiagram
 | 컬럼명 | 타입 | 제약조건 | 설명 |
 |--------|------|----------|------|
 | id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
-| member_id | BIGINT | FK, UK, NOT NULL | 회원 ID |
+| user_id | VARCHAR(20) | FK, UK, NOT NULL | 사용자 ID |
 | balance | BIGINT | NOT NULL, DEFAULT 0 | 잔액 |
 | updated_at | DATETIME | NOT NULL | 수정일시 |
 
 **인덱스**
-- `uk_point_member_id` (UNIQUE): member_id
+- `uk_point_user_id` (UNIQUE): user_id
 
 **외래키**
-- `fk_point_member`: member_id → member(id)
+- `fk_point_user`: user_id → users(user_id)
 
 ---
 
@@ -178,17 +180,17 @@ erDiagram
 | 컬럼명 | 타입 | 제약조건 | 설명 |
 |--------|------|----------|------|
 | id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
-| member_id | BIGINT | FK, NOT NULL | 회원 ID |
+| user_id | VARCHAR(20) | FK, NOT NULL | 사용자 ID |
 | amount | BIGINT | NOT NULL | 금액 |
 | type | VARCHAR(20) | NOT NULL | 유형 (CHARGE/USE/REFUND) |
 | description | VARCHAR(200) | | 설명 |
 | created_at | DATETIME | NOT NULL | 생성일시 |
 
 **인덱스**
-- `idx_point_history_member_id_created_at`: (member_id, created_at DESC)
+- `idx_point_history_user_id_created_at`: (user_id, created_at DESC)
 
 **외래키**
-- `fk_point_history_member`: member_id → member(id)
+- `fk_point_history_user`: user_id → users(user_id)
 
 ---
 
@@ -260,17 +262,17 @@ erDiagram
 | 컬럼명 | 타입 | 제약조건 | 설명 |
 |--------|------|----------|------|
 | id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
-| member_id | BIGINT | FK, NOT NULL | 회원 ID |
+| user_id | VARCHAR(20) | FK, NOT NULL | 사용자 ID |
 | product_id | BIGINT | FK, NOT NULL | 상품 ID |
 | created_at | DATETIME | NOT NULL | 생성일시 |
 
 **인덱스**
-- `uk_likes_member_product` (UNIQUE): (member_id, product_id)
-- `idx_likes_member_id_created_at`: (member_id, created_at DESC)
+- `uk_likes_user_product` (UNIQUE): (user_id, product_id)
+- `idx_likes_user_id_created_at`: (user_id, created_at DESC)
 - `idx_likes_product_id`: product_id
 
 **외래키**
-- `fk_likes_member`: member_id → member(id)
+- `fk_likes_user`: user_id → users(user_id)
 - `fk_likes_product`: product_id → product(id)
 
 ---
@@ -282,7 +284,7 @@ erDiagram
 | 컬럼명 | 타입 | 제약조건 | 설명 |
 |--------|------|----------|------|
 | id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
-| member_id | BIGINT | FK, NOT NULL | 회원 ID |
+| user_id | VARCHAR(20) | FK, NOT NULL | 사용자 ID |
 | order_number | VARCHAR(50) | UK, NOT NULL | 주문번호 |
 | status | VARCHAR(20) | NOT NULL, DEFAULT 'PENDING' | 상태 |
 | total_amount | BIGINT | NOT NULL | 총 금액 |
@@ -291,11 +293,11 @@ erDiagram
 
 **인덱스**
 - `uk_orders_order_number` (UNIQUE): order_number
-- `idx_orders_member_id_ordered_at`: (member_id, ordered_at DESC)
+- `idx_orders_user_id_ordered_at`: (user_id, ordered_at DESC)
 - `idx_orders_status`: status
 
 **외래키**
-- `fk_orders_member`: member_id → member(id)
+- `fk_orders_user`: user_id → users(user_id)
 
 ---
 
@@ -346,39 +348,40 @@ erDiagram
 ## DDL 스크립트
 
 ```sql
--- member
-CREATE TABLE member (
+-- users
+CREATE TABLE users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    member_id VARCHAR(20) NOT NULL,
-    email VARCHAR(100) NOT NULL,
-    gender VARCHAR(10) NOT NULL,
-    birth_date DATE NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_member_member_id (member_id),
-    UNIQUE KEY uk_member_email (email)
+    user_id VARCHAR(20) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    birthday VARCHAR(10) NOT NULL,
+    gender VARCHAR(20) NOT NULL,
+    created_at DATETIME(6) NOT NULL,
+    updated_at DATETIME(6) NOT NULL,
+    deleted_at DATETIME(6) NULL,
+    UNIQUE KEY uk_users_user_id (user_id),
+    UNIQUE KEY uk_users_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- point
 CREATE TABLE point (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    member_id BIGINT NOT NULL,
+    user_id VARCHAR(20) NOT NULL,
     balance BIGINT NOT NULL DEFAULT 0,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_point_member_id (member_id),
-    CONSTRAINT fk_point_member FOREIGN KEY (member_id) REFERENCES member(id)
+    UNIQUE KEY uk_point_user_id (user_id),
+    CONSTRAINT fk_point_user FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- point_history
 CREATE TABLE point_history (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    member_id BIGINT NOT NULL,
+    user_id VARCHAR(20) NOT NULL,
     amount BIGINT NOT NULL,
     type VARCHAR(20) NOT NULL,
     description VARCHAR(200),
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_point_history_member_id_created_at (member_id, created_at DESC),
-    CONSTRAINT fk_point_history_member FOREIGN KEY (member_id) REFERENCES member(id)
+    INDEX idx_point_history_user_id_created_at (user_id, created_at DESC),
+    CONSTRAINT fk_point_history_user FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- brand
@@ -422,29 +425,29 @@ CREATE TABLE stock (
 -- likes
 CREATE TABLE likes (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    member_id BIGINT NOT NULL,
+    user_id VARCHAR(20) NOT NULL,
     product_id BIGINT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_likes_member_product (member_id, product_id),
-    INDEX idx_likes_member_id_created_at (member_id, created_at DESC),
+    UNIQUE KEY uk_likes_user_product (user_id, product_id),
+    INDEX idx_likes_user_id_created_at (user_id, created_at DESC),
     INDEX idx_likes_product_id (product_id),
-    CONSTRAINT fk_likes_member FOREIGN KEY (member_id) REFERENCES member(id),
+    CONSTRAINT fk_likes_user FOREIGN KEY (user_id) REFERENCES users(user_id),
     CONSTRAINT fk_likes_product FOREIGN KEY (product_id) REFERENCES product(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- orders
 CREATE TABLE orders (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    member_id BIGINT NOT NULL,
+    user_id VARCHAR(20) NOT NULL,
     order_number VARCHAR(50) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     total_amount BIGINT NOT NULL,
     ordered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uk_orders_order_number (order_number),
-    INDEX idx_orders_member_id_ordered_at (member_id, ordered_at DESC),
+    INDEX idx_orders_user_id_ordered_at (user_id, ordered_at DESC),
     INDEX idx_orders_status (status),
-    CONSTRAINT fk_orders_member FOREIGN KEY (member_id) REFERENCES member(id)
+    CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- order_item

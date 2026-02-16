@@ -65,6 +65,7 @@ public class UserV1ApiE2ETest {
                     assertThat(responseData.email()).isEqualTo(TEST_EMAIL);
                     assertThat(responseData.birthday()).isEqualTo(TEST_BIRTHDAY);
                     assertThat(responseData.gender()).isEqualTo(TEST_GENDER);
+                    assertThat(responseData.createdAt()).isNotBlank();
                 }
             );
         }
@@ -123,7 +124,7 @@ public class UserV1ApiE2ETest {
         }
     }
 
-    @DisplayName("GET /api/v1/users")
+    @DisplayName("GET /api/v1/users/me")
     @Nested
     class Get {
         @DisplayName("내 정보 조회에 성공할 경우, 해당하는 유저 정보를 응답으로 반환한다.")
@@ -151,6 +152,7 @@ public class UserV1ApiE2ETest {
                     assertThat(responseData.email()).isEqualTo(TEST_EMAIL);
                     assertThat(responseData.birthday()).isEqualTo(TEST_BIRTHDAY);
                     assertThat(responseData.gender()).isEqualTo(TEST_GENDER);
+                    assertThat(responseData.createdAt()).isNotBlank();
                 }
             );
         }

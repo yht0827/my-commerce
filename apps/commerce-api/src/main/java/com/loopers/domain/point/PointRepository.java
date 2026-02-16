@@ -6,7 +6,7 @@ import com.loopers.domain.user.UserId;
 
 public interface PointRepository {
 
-	Optional<Point> findByUsersId(final UserId usersId);
+	Optional<Point> findByUserId(final UserId userId);
 
 	Optional<Point> findByUserIdWithPessimisticLock(final UserId userId);
 
