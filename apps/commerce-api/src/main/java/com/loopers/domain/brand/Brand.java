@@ -2,7 +2,6 @@ package com.loopers.domain.brand;
 
 import com.loopers.domain.BaseEntity;
 
-import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -19,11 +18,22 @@ import lombok.NoArgsConstructor;
 public class Brand extends BaseEntity {
 
 	@Embedded
-	@AttributeOverride(name = "brandName", column = @Column(name = "brand_name"))
 	private BrandName brandName;
 
+	@Column(name = "description", length = 500)
+	private String description;
+
+	@Column(name = "logo_url", length = 500)
+	private String logoUrl;
+
+	public Brand(final BrandName brandName) {
+		this(brandName, null, null);
+	}
+
 	@Builder
-	public Brand(BrandName brandName) {
+	public Brand(final BrandName brandName, final String description, final String logoUrl) {
 		this.brandName = brandName;
+		this.description = description;
+		this.logoUrl = logoUrl;
 	}
 }

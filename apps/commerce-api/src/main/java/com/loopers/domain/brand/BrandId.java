@@ -25,4 +25,8 @@ public class BrandId implements Serializable {
 		}
 		this.brandId = brandId;
 	}
+
+	public static BrandId of(final Long brandId) {
+		return new BrandId(brandId);
+	}
 }

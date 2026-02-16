@@ -1,6 +1,7 @@
 package com.loopers.application.brand;
 
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.loopers.domain.brand.BrandId;
 import com.loopers.domain.brand.BrandInfo;
@@ -8,14 +9,14 @@ import com.loopers.domain.brand.BrandService;
 
 import lombok.RequiredArgsConstructor;
 
+@Service
 @RequiredArgsConstructor
-@Component
-public class BrandFacade {
+@Transactional(readOnly = true)
+public class BrandApplicationService {
 	private final BrandService brandService;
 
-	public BrandResult getBrandById(final BrandId brandId) {
-		BrandInfo brandInfo = brandService.getBrandById(brandId.getBrandId());
-
+	public BrandResult getBrandById(final Long brandId) {
+		BrandInfo brandInfo = brandService.getBrandById(BrandId.of(brandId));
 		return BrandResult.from(brandInfo);
 	}
 }

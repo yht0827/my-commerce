@@ -24,8 +24,8 @@ public class BrandService {
 	private final Cache<String, Object> brandL1Cache;
 	private final RedisTemplate<String, Object> brandL2Cache;
 
-	public BrandInfo getBrandById(final Long brandId) {
-		String cacheKey = CACHE_KEY_PREFIX_BRAND + ":" + brandId;
+	public BrandInfo getBrandById(final BrandId brandId) {
+		String cacheKey = CACHE_KEY_PREFIX_BRAND + ":" + brandId.getBrandId();
 
 		// 1. L1 캐시 확인 (Cache-Aside)
 		BrandInfo l1Result = (BrandInfo)brandL1Cache.getIfPresent(cacheKey);
@@ -46,7 +46,8 @@ public class BrandService {
 		// 3. 캐시 미스 - DB 조회 및 캐시 저장
 		log.debug("Cache miss: {}", cacheKey);
 		Brand brand = brandRepository.findById(brandId)
-			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "해당 [id = " + brandId + "]의 브랜드를 찾을 수 없습니다."));
+			.orElseThrow(
+				() -> new CoreException(ErrorType.NOT_FOUND, "해당 [id = " + brandId.getBrandId() + "]의 브랜드를 찾을 수 없습니다."));
 
 		BrandInfo result = BrandInfo.from(brand);
 

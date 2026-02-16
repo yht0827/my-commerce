@@ -7,9 +7,9 @@
 - [전체 ERD](#전체-erd)
 - [테이블 상세](#테이블-상세)
   - [users](#users)
-  - [point](#point)
-  - [point_history](#point_history)
-  - [brand](#brand)
+  - [points](#points)
+  - [point_histories](#point_histories)
+  - [brands](#brands)
   - [product](#product)
   - [stock](#stock)
   - [likes](#likes)
@@ -23,12 +23,12 @@
 
 ```mermaid
 erDiagram
-    users ||--o{ point : has
-    users ||--o{ point_history : has
+    users ||--o{ points : has
+    users ||--o{ point_histories : has
     users ||--o{ likes : creates
     users ||--o{ orders : places
 
-    brand ||--o{ product : owns
+    brands ||--o{ product : owns
 
     product ||--|| stock : has
     product ||--o{ likes : receives
@@ -48,29 +48,34 @@ erDiagram
         datetime deleted_at "삭제일시(소프트 삭제)"
     }
 
-    point {
+    points {
         bigint id PK
         varchar user_id FK,UK "사용자 ID"
-        bigint balance "잔액"
+        decimal balance "잔액"
+        datetime created_at "생성일시"
         datetime updated_at "수정일시"
+        datetime deleted_at "삭제일시(소프트 삭제)"
     }
 
-    point_history {
+    point_histories {
         bigint id PK
         varchar user_id FK "사용자 ID"
-        bigint amount "금액"
+        decimal amount "금액"
         varchar type "유형 (CHARGE/USE/REFUND)"
         varchar description "설명"
         datetime created_at "생성일시"
+        datetime updated_at "수정일시"
+        datetime deleted_at "삭제일시(소프트 삭제)"
     }
 
-    brand {
+    brands {
         bigint id PK
         varchar name "브랜드명"
         varchar description "설명"
         varchar logo_url "로고 URL"
         datetime created_at "생성일시"
         datetime updated_at "수정일시"
+        datetime deleted_at "삭제일시(소프트 삭제)"
     }
 
     product {
@@ -154,7 +159,7 @@ erDiagram
 
 ---
 
-### point
+### points
 
 > 포인트 잔액 테이블
 
@@ -162,18 +167,20 @@ erDiagram
 |--------|------|----------|------|
 | id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
 | user_id | VARCHAR(20) | FK, UK, NOT NULL | 사용자 ID |
-| balance | BIGINT | NOT NULL, DEFAULT 0 | 잔액 |
-| updated_at | DATETIME | NOT NULL | 수정일시 |
+| balance | DECIMAL(19,2) | NOT NULL | 잔액 |
+| created_at | DATETIME(6) | NOT NULL | 생성일시 |
+| updated_at | DATETIME(6) | NOT NULL | 수정일시 |
+| deleted_at | DATETIME(6) | NULL | 삭제일시(소프트 삭제) |
 
 **인덱스**
-- `uk_point_user_id` (UNIQUE): user_id
+- `uk_points_user_id` (UNIQUE): user_id
 
 **외래키**
-- `fk_point_user`: user_id → users(user_id)
+- `fk_points_user_id`: user_id → users(user_id)
 
 ---
 
-### point_history
+### point_histories
 
 > 포인트 이력 테이블
 
@@ -181,20 +188,22 @@ erDiagram
 |--------|------|----------|------|
 | id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
 | user_id | VARCHAR(20) | FK, NOT NULL | 사용자 ID |
-| amount | BIGINT | NOT NULL | 금액 |
+| amount | DECIMAL(19,2) | NOT NULL | 금액 |
 | type | VARCHAR(20) | NOT NULL | 유형 (CHARGE/USE/REFUND) |
 | description | VARCHAR(200) | | 설명 |
-| created_at | DATETIME | NOT NULL | 생성일시 |
+| created_at | DATETIME(6) | NOT NULL | 생성일시 |
+| updated_at | DATETIME(6) | NOT NULL | 수정일시 |
+| deleted_at | DATETIME(6) | NULL | 삭제일시(소프트 삭제) |
 
 **인덱스**
-- `idx_point_history_user_id_created_at`: (user_id, created_at DESC)
+- `idx_point_histories_user_id_created_at`: (user_id, created_at DESC)
 
 **외래키**
-- `fk_point_history_user`: user_id → users(user_id)
+- `fk_point_histories_user_id`: user_id → users(user_id)
 
 ---
 
-### brand
+### brands
 
 > 브랜드 정보 테이블
 
@@ -204,8 +213,9 @@ erDiagram
 | name | VARCHAR(100) | NOT NULL | 브랜드명 |
 | description | VARCHAR(500) | | 설명 |
 | logo_url | VARCHAR(500) | | 로고 URL |
-| created_at | DATETIME | NOT NULL | 생성일시 |
-| updated_at | DATETIME | NOT NULL | 수정일시 |
+| created_at | DATETIME(6) | NOT NULL | 생성일시 |
+| updated_at | DATETIME(6) | NOT NULL | 수정일시 |
+| deleted_at | DATETIME(6) | NULL | 삭제일시(소프트 삭제) |
 
 ---
 
@@ -232,7 +242,7 @@ erDiagram
 - `idx_product_like_count`: like_count DESC
 
 **외래키**
-- `fk_product_brand`: brand_id → brand(id)
+- `fk_product_brand`: brand_id → brands(id)
 
 ---
 
@@ -362,36 +372,41 @@ CREATE TABLE users (
     UNIQUE KEY uk_users_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- point
-CREATE TABLE point (
+-- points
+CREATE TABLE points (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(20) NOT NULL,
-    balance BIGINT NOT NULL DEFAULT 0,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_point_user_id (user_id),
-    CONSTRAINT fk_point_user FOREIGN KEY (user_id) REFERENCES users(user_id)
+    balance DECIMAL(19,2) NOT NULL,
+    created_at DATETIME(6) NOT NULL,
+    updated_at DATETIME(6) NOT NULL,
+    deleted_at DATETIME(6) NULL,
+    UNIQUE KEY uk_points_user_id (user_id),
+    CONSTRAINT fk_points_user_id FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- point_history
-CREATE TABLE point_history (
+-- point_histories
+CREATE TABLE point_histories (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(20) NOT NULL,
-    amount BIGINT NOT NULL,
+    amount DECIMAL(19,2) NOT NULL,
     type VARCHAR(20) NOT NULL,
     description VARCHAR(200),
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_point_history_user_id_created_at (user_id, created_at DESC),
-    CONSTRAINT fk_point_history_user FOREIGN KEY (user_id) REFERENCES users(user_id)
+    created_at DATETIME(6) NOT NULL,
+    updated_at DATETIME(6) NOT NULL,
+    deleted_at DATETIME(6) NULL,
+    INDEX idx_point_histories_user_id_created_at (user_id, created_at DESC),
+    CONSTRAINT fk_point_histories_user_id FOREIGN KEY (user_id) REFERENCES users(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- brand
-CREATE TABLE brand (
+-- brands
+CREATE TABLE brands (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     description VARCHAR(500),
     logo_url VARCHAR(500),
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    created_at DATETIME(6) NOT NULL,
+    updated_at DATETIME(6) NOT NULL,
+    deleted_at DATETIME(6) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- product
@@ -409,7 +424,7 @@ CREATE TABLE product (
     INDEX idx_product_status (status),
     INDEX idx_product_created_at (created_at DESC),
     INDEX idx_product_like_count (like_count DESC),
-    CONSTRAINT fk_product_brand FOREIGN KEY (brand_id) REFERENCES brand(id)
+    CONSTRAINT fk_product_brand FOREIGN KEY (brand_id) REFERENCES brands(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- stock

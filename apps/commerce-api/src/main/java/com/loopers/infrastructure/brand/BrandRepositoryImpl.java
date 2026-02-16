@@ -16,7 +16,7 @@ public class BrandRepositoryImpl implements BrandRepository {
 	private final BrandJpaRepository brandJpaRepository;
 
 	@Override
-	public Optional<Brand> findById(final Long brandId) {
-		return brandJpaRepository.findById(brandId);
+	public Optional<Brand> findById(final BrandId brandId) {
+		return brandJpaRepository.findById(brandId.getBrandId());
 	}
 }

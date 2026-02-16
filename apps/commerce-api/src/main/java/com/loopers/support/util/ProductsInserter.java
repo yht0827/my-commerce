@@ -211,7 +211,7 @@ public class ProductsInserter {
 			}
 
 			rs = stmt.executeQuery("""
-				SELECT p.id, b.brand_name, p.name, p.price, p.quantity 
+				SELECT p.id, b.name, p.name, p.price, p.quantity 
 				FROM products p 
 				JOIN brands b ON p.brand_id = b.id 
 				ORDER BY p.id LIMIT 5

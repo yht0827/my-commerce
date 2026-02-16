@@ -16,7 +16,7 @@ import java.io.Serializable;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class BrandName implements Serializable {
 	
-	@Column(name = "brand_name")
+	@Column(name = "name")
 	private String brandName;
 	
 	public BrandName(String brandName) {

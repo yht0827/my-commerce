@@ -5,12 +5,16 @@ import com.loopers.domain.brand.BrandName;
 
 public record BrandResponse(
 	Long brandId,
-	BrandName brandName
+	BrandName brandName,
+	String description,
+	String logoUrl
 ) {
 	public static BrandResponse from(BrandResult brandResult) {
 		return new BrandResponse(
 			brandResult.brandId(),
-			brandResult.brandName()
+			brandResult.brandName(),
+			brandResult.description(),
+			brandResult.logoUrl()
 		);
 	}
 }
