@@ -91,8 +91,8 @@ sequenceDiagram
 
         alt 사용자 미존재
             DB-->>Server: 조회 결과 없음
-            Server-->>Client: 401 Unauthorized
-            Client-->>User: 로그인 필요 안내
+            Server-->>Client: 404 Not Found
+            Client-->>User: 회원 정보 없음 안내
         else 사용자 존재
             DB-->>Server: 사용자 정보
             Server-->>Client: 200 OK (회원 정보)

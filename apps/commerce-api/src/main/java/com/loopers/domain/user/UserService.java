@@ -3,19 +3,20 @@ package com.loopers.domain.user;
 import static com.loopers.support.error.ErrorMessage.*;
 import static com.loopers.support.error.ErrorType.*;
 
-import java.sql.SQLIntegrityConstraintViolationException;
-import java.sql.SQLException;
-
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import com.loopers.support.error.CoreException;
 
 import lombok.RequiredArgsConstructor;
 
-@Component
+@Service
 @RequiredArgsConstructor
 public class UserService {
+	private static final String USER_ID_UNIQUE_CONSTRAINT = "uk_users_user_id";
+	private static final String USER_EMAIL_UNIQUE_CONSTRAINT = "uk_users_email";
+
 	private final UserRepository userRepository;
 
 	public User register(final String userId, final String email, final String birthday, final String gender) {
@@ -32,8 +33,9 @@ public class UserService {
 		try {
 			return userRepository.save(user);
 		} catch (DataIntegrityViolationException e) {
-			if (isDuplicateKeyException(e)) {
-				throw new CoreException(CONFLICT);
+			CoreException conflictException = mapUserConflictException(e);
+			if (conflictException != null) {
+				throw conflictException;
 			}
 			throw e;
 		}
@@ -63,15 +65,19 @@ public class UserService {
 		}
 	}
 
-	private boolean isDuplicateKeyException(final DataIntegrityViolationException e) {
-		Throwable mostSpecificCause = e.getMostSpecificCause();
-		if (mostSpecificCause instanceof SQLIntegrityConstraintViolationException) {
-			return true;
+	private CoreException mapUserConflictException(final DataIntegrityViolationException e) {
+		if (!(e.getCause() instanceof ConstraintViolationException constraintViolation)) {
+			return null;
 		}
-		if (mostSpecificCause instanceof SQLException sqlException) {
-			String sqlState = sqlException.getSQLState();
-			return sqlState != null && sqlState.startsWith("23");
+
+		String constraintName = constraintViolation.getConstraintName();
+		if (constraintName != null && USER_ID_UNIQUE_CONSTRAINT.equalsIgnoreCase(constraintName)) {
+			return new CoreException(CONFLICT, USER_ID_ALREADY_EXISTS.getMessage());
 		}
-		return false;
+		if (constraintName != null && USER_EMAIL_UNIQUE_CONSTRAINT.equalsIgnoreCase(constraintName)) {
+			return new CoreException(CONFLICT, EMAIL_ALREADY_EXISTS.getMessage());
+		}
+
+		return new CoreException(CONFLICT);
 	}
 }

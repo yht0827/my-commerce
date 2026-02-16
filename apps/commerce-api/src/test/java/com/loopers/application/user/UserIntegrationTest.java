@@ -96,7 +96,7 @@ public class UserIntegrationTest {
                     CoreException.class,
                     () -> userApplicationService.getUser(GetUserQuery.of(nonExistentUserId))
                 );
-                assertThat(result.getErrorType()).isEqualTo(ErrorType.UNAUTHORIZED);
+	                assertThat(result.getErrorType()).isEqualTo(ErrorType.NOT_FOUND);
             }
         }
     }

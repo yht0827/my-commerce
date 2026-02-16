@@ -180,15 +180,15 @@ public class UserV1ApiE2ETest {
 	            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
 	        }
 
-	        @DisplayName("존재하지 않는 ID 로 조회할 경우, 401 Unauthorized 응답을 반환한다.")
+	        @DisplayName("존재하지 않는 ID 로 조회할 경우, 404 Not Found 응답을 반환한다.")
 	        @Test
-        void returnsUnauthorized_whenIdDoesNotExist() {
-            // act
-            ResponseEntity<ApiResponse<UserDto.V1.UserResponse>> response = getUserInfo("notExistsUser");
+	        void returnsNotFound_whenIdDoesNotExist() {
+	            // act
+	            ResponseEntity<ApiResponse<UserDto.V1.UserResponse>> response = getUserInfo("notExistsUser");
 
-            // assert
-            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        }
+	            // assert
+	            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+	        }
     }
 
     private UserDto.V1.UserRequest createUserRequest() {

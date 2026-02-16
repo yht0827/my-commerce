@@ -8,7 +8,7 @@ public enum ErrorMessage {
 	USER_ID_REQUIRED("사용자 ID는 필수입니다."),
 	USER_NAME_REQUIRED("사용자 이름은 필수입니다."),
 	USER_EMAIL_REQUIRED("사용자 이메일은 필수입니다."),
-	USER_ID_ALREADY_EXISTS("이미 존재하는 ID입니다."),
+	USER_ID_ALREADY_EXISTS("이미 사용중인 ID입니다."),
 	EMAIL_ALREADY_EXISTS("이미 사용중인 이메일입니다"),
 	USER_NOT_FOUND("해당 사용자 ID '%s'의 회원을 찾을 수 없습니다."),
 	BIRTHDAY_INVALID_FORMAT("생년월일은 yyyy-MM-dd 형식이어야 합니다."),
