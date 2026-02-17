@@ -1,7 +1,8 @@
 package com.loopers.application.product;
 
 import org.springframework.data.domain.Page;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.loopers.domain.product.ProductCommand;
 import com.loopers.domain.product.ProductInfo;
@@ -11,22 +12,23 @@ import com.loopers.domain.rank.RankingQueryService;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-@Component
-public class ProductFacade {
+@Service
+@Transactional(readOnly = true)
+public class ProductApplicationService {
 
 	private final ProductService productService;
 	private final RankingQueryService rankingQueryService;
 
-	public ProductListResult getProductList(final ProductCriteria.GetProductList criteria) {
-		ProductCommand.GetProductList command = criteria.toCommand();
+	public ProductListResult getProductList(final GetProductListQuery query) {
+		ProductCommand.GetProductList command = query.toCommand();
 		Page<ProductInfo> products = productService.getProductList(command);
 		return ProductListResult.from(products);
 	}
 
-	public ProductDetailResult getProductDetail(final Long productId) {
-		ProductInfo productInfo = productService.getProductDetail(productId);
+	public ProductDetailResult getProductDetail(final GetProductDetailQuery query) {
+		ProductInfo productInfo = productService.getProductDetail(query.productId());
 
-		Long rank = rankingQueryService.getProductRanking(productId);
+		Long rank = rankingQueryService.getProductRanking(query.productId());
 
 		return ProductDetailResult.from(productInfo, rank);
 	}

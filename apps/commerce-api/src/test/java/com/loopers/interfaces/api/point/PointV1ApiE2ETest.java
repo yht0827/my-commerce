@@ -117,7 +117,7 @@ public class PointV1ApiE2ETest {
             var histories = pointHistoryJpaRepository.findAllByUserIdOrderByCreatedAtDesc(UserId.of(TEST_USER_ID));
             assertThat(histories.size()).isEqualTo(1);
             assertThat(histories.getFirst().getType()).isEqualTo(PointHistoryType.CHARGE);
-            assertThat(histories.getFirst().getAmount()).isEqualByComparingTo(CHARGE_AMOUNT);
+            assertThat(histories.getFirst().getAmount().getBalance()).isEqualByComparingTo(CHARGE_AMOUNT);
         }
 
         @Test

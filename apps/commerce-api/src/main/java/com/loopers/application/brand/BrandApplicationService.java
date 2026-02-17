@@ -15,8 +15,8 @@ import lombok.RequiredArgsConstructor;
 public class BrandApplicationService {
 	private final BrandService brandService;
 
-	public BrandResult getBrandById(final Long brandId) {
-		BrandInfo brandInfo = brandService.getBrandById(BrandId.of(brandId));
+	public BrandResult getBrandById(final GetBrandQuery query) {
+		BrandInfo brandInfo = brandService.getBrandById(BrandId.of(query.brandId()));
 		return BrandResult.from(brandInfo);
 	}
 }

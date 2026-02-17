@@ -110,7 +110,7 @@ public class PointIntegrationTest {
 			var histories = pointHistoryJpaRepository.findAllByUserIdOrderByCreatedAtDesc(UserId.of(TEST_USER_ID));
 			assertThat(histories.size()).isEqualTo(1);
 			assertThat(histories.getFirst().getType()).isEqualTo(PointHistoryType.CHARGE);
-			assertThat(histories.getFirst().getAmount()).isEqualByComparingTo(CHARGE_AMOUNT);
+			assertThat(histories.getFirst().getAmount().getBalance()).isEqualByComparingTo(CHARGE_AMOUNT);
 		}
 
 		@DisplayName("존재하지 않는 유저 ID로 충전을 시도한 경우, 예외가 발생한다.")

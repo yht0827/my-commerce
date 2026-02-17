@@ -10,7 +10,7 @@ services:
       - MYSQL_PASSWORD=application
       - MYSQL_DATABASE=loopers
       - MYSQL_CHARACTER_SET=utf8mb4
-      - MYSQL_COLLATE=utf8mb4_general_ci
+      - MYSQL_COLLATE=utf8mb4_0900_ai_ci
     volumes:
       - mysql-8-data:/var/lib/mysql
 
@@ -24,7 +24,7 @@ services:
       - MYSQL_PASSWORD=application
       - MYSQL_DATABASE=paymentgateway
       - MYSQL_CHARACTER_SET=utf8mb4
-      - MYSQL_COLLATE=utf8mb4_general_ci
+      - MYSQL_COLLATE=utf8mb4_0900_ai_ci
     volumes:
       - pg-simulator-data:/var/lib/mysql
 

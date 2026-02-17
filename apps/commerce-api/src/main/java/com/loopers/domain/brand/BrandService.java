@@ -1,11 +1,9 @@
 package com.loopers.domain.brand;
 
-import java.time.Duration;
+import java.util.Optional;
 
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import com.github.benmanes.caffeine.cache.Cache;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
@@ -17,44 +15,32 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class BrandService {
 
-	private static final Duration L2_BRAND_TTL = Duration.ofHours(2);
-	private static final String CACHE_KEY_PREFIX_BRAND = "brand";
-
 	private final BrandRepository brandRepository;
-	private final Cache<String, Object> brandL1Cache;
-	private final RedisTemplate<String, Object> brandL2Cache;
+	private final BrandCacheRepository brandCacheRepository;
+	private final BrandCacheMetrics brandCacheMetrics;
 
 	public BrandInfo getBrandById(final BrandId brandId) {
-		String cacheKey = CACHE_KEY_PREFIX_BRAND + ":" + brandId.getBrandId();
-
-		// 1. L1 캐시 확인 (Cache-Aside)
-		BrandInfo l1Result = (BrandInfo)brandL1Cache.getIfPresent(cacheKey);
-		if (l1Result != null) {
-			log.debug("L1 Cache hit: {}", cacheKey);
-			return l1Result;
+		Optional<BrandInfo> cached = brandCacheRepository.findById(brandId);
+		if (cached.isPresent()) {
+			brandCacheMetrics.recordCacheHit();
+			log.debug("Redis cache hit: brandId={}", brandId.getBrandId());
+			return cached.get();
 		}
 
-		// 2. L2 캐시 확인
-		BrandInfo l2Result = (BrandInfo)brandL2Cache.opsForValue().get(cacheKey);
-		if (l2Result != null) {
-			log.debug("L2 Cache hit: {}", cacheKey);
-			// L1에 다시 저장 (Write-Through)
-			brandL1Cache.put(cacheKey, l2Result);
-			return l2Result;
-		}
+		brandCacheMetrics.recordCacheMiss();
+		return loadFromDatabaseAndCache(brandId);
+	}
 
-		// 3. 캐시 미스 - DB 조회 및 캐시 저장
-		log.debug("Cache miss: {}", cacheKey);
+	private BrandInfo loadFromDatabaseAndCache(final BrandId brandId) {
+		brandCacheMetrics.recordDbLoad();
+		log.debug("Cache miss: brandId={}", brandId.getBrandId());
+
 		Brand brand = brandRepository.findById(brandId)
 			.orElseThrow(
 				() -> new CoreException(ErrorType.NOT_FOUND, "해당 [id = " + brandId.getBrandId() + "]의 브랜드를 찾을 수 없습니다."));
 
-		BrandInfo result = BrandInfo.from(brand);
-
-		// 캐시 저장 (Write-Through)
-		brandL2Cache.opsForValue().set(cacheKey, result, L2_BRAND_TTL);
-		brandL1Cache.put(cacheKey, result);
-
-		return result;
+		BrandInfo brandInfo = BrandInfo.from(brand);
+		brandCacheRepository.save(brandId, brandInfo);
+		return brandInfo;
 	}
 }

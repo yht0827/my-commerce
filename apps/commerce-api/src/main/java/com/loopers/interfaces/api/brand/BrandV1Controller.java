@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.loopers.application.brand.BrandApplicationService;
 import com.loopers.application.brand.BrandResult;
+import com.loopers.application.brand.GetBrandQuery;
 import com.loopers.interfaces.api.common.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
@@ -14,13 +15,15 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/brands")
-public class BrandV1Controller {
+public class BrandV1Controller implements BrandV1ApiSpec {
 	private final BrandApplicationService brandApplicationService;
 
 	@GetMapping("/{brandId}")
-	public ApiResponse<BrandResponse> getBrandById(@PathVariable final Long brandId) {
-		BrandResult brandResult = brandApplicationService.getBrandById(brandId);
-		BrandResponse brandResponse = BrandResponse.from(brandResult);
+	@Override
+	public ApiResponse<BrandDto.V1.BrandResponse> getBrandById(@PathVariable final Long brandId) {
+		GetBrandQuery query = GetBrandQuery.of(brandId);
+		BrandResult brandResult = brandApplicationService.getBrandById(query);
+		BrandDto.V1.BrandResponse brandResponse = BrandDto.V1.BrandResponse.from(brandResult);
 		return ApiResponse.success(brandResponse);
 	}
 }

@@ -1,10 +1,9 @@
 package com.loopers.domain.point;
 
-import java.math.BigDecimal;
-
 import com.loopers.domain.BaseEntity;
 import com.loopers.domain.user.UserId;
 
+import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -25,8 +24,9 @@ public class PointHistory extends BaseEntity {
 	@Embedded
 	private UserId userId;
 
-	@Column(name = "amount", nullable = false)
-	private BigDecimal amount;
+	@Embedded
+	@AttributeOverride(name = "balance", column = @Column(name = "amount", nullable = false))
+	private Balance amount;
 
 	@Enumerated(EnumType.STRING)
 	@Column(name = "type", nullable = false, length = 20)
@@ -36,7 +36,7 @@ public class PointHistory extends BaseEntity {
 	private String description;
 
 	@Builder(builderMethodName = "create")
-	public PointHistory(final UserId userId, final BigDecimal amount, final PointHistoryType type,
+	public PointHistory(final UserId userId, final Balance amount, final PointHistoryType type,
 		final String description) {
 		this.userId = userId;
 		this.amount = amount;
@@ -47,7 +47,7 @@ public class PointHistory extends BaseEntity {
 	public static PointHistory charge(final UserId userId, final Balance amount) {
 		return PointHistory.create()
 			.userId(userId)
-			.amount(amount.getBalance())
+			.amount(amount)
 			.type(PointHistoryType.CHARGE)
 			.description("포인트 충전")
 			.build();

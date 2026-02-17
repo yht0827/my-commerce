@@ -17,7 +17,7 @@ public class MySqlTestContainersConfig {
             .withExposedPorts(3306)
             .withCommand(
                 "--character-set-server=utf8mb4",
-                "--collation-server=utf8mb4_general_ci",
+                "--collation-server=utf8mb4_0900_ai_ci",
                 "--skip-character-set-client-handshake"
             );
         mySqlContainer.start();
