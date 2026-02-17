@@ -2,6 +2,7 @@ package com.loopers.application.product;
 
 import org.springframework.data.domain.Pageable;
 
+import com.loopers.domain.brand.BrandId;
 import com.loopers.domain.product.ProductCommand;
 
 public record GetProductListQuery(
@@ -9,6 +10,7 @@ public record GetProductListQuery(
 	Pageable pageable
 ) {
 	public ProductCommand.GetProductList toCommand() {
-		return new ProductCommand.GetProductList(brandId, pageable);
+		BrandId resolvedBrandId = brandId == null ? null : BrandId.of(brandId);
+		return new ProductCommand.GetProductList(resolvedBrandId, pageable);
 	}
 }

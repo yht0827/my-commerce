@@ -3,6 +3,9 @@ package com.loopers.application.user;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.loopers.domain.user.Birthday;
+import com.loopers.domain.user.Email;
+import com.loopers.domain.user.Gender;
 import com.loopers.domain.user.User;
 import com.loopers.domain.user.UserId;
 import com.loopers.domain.user.UserService;
@@ -17,10 +20,10 @@ public class UserApplicationService {
 
 	public UserResult register(final CreateUserCommand command) {
 		User savedUser = userService.register(
-			command.userId(),
-			command.email(),
-			command.birthday(),
-			command.gender());
+			UserId.of(command.userId()),
+			Email.of(command.email()),
+			Birthday.of(command.birthday()),
+			Gender.of(command.gender()));
 
 		return UserResult.from(savedUser);
 	}

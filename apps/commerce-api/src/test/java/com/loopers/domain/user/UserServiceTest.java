@@ -44,7 +44,7 @@ class UserServiceTest {
 		// act
 		CoreException result = assertThrows(
 			CoreException.class,
-			() -> userService.register(USER_ID, EMAIL, BIRTHDAY, GENDER)
+			() -> userService.register(UserId.of(USER_ID), Email.of(EMAIL), Birthday.of(BIRTHDAY), Gender.of(GENDER))
 		);
 
 		// assert
@@ -72,7 +72,7 @@ class UserServiceTest {
 		// act
 		CoreException result = assertThrows(
 			CoreException.class,
-			() -> userService.register(USER_ID, EMAIL, BIRTHDAY, GENDER)
+			() -> userService.register(UserId.of(USER_ID), Email.of(EMAIL), Birthday.of(BIRTHDAY), Gender.of(GENDER))
 		);
 
 		// assert
@@ -103,7 +103,7 @@ class UserServiceTest {
 		// act
 		CoreException result = assertThrows(
 			CoreException.class,
-			() -> userService.register(USER_ID, EMAIL, BIRTHDAY, GENDER)
+			() -> userService.register(UserId.of(USER_ID), Email.of(EMAIL), Birthday.of(BIRTHDAY), Gender.of(GENDER))
 		);
 
 		// assert
@@ -129,7 +129,37 @@ class UserServiceTest {
 		// act
 		DataIntegrityViolationException result = assertThrows(
 			DataIntegrityViolationException.class,
-			() -> userService.register(USER_ID, EMAIL, BIRTHDAY, GENDER)
+			() -> userService.register(UserId.of(USER_ID), Email.of(EMAIL), Birthday.of(BIRTHDAY), Gender.of(GENDER))
+		);
+
+		// assert
+		assertThat(result).isSameAs(exception);
+	}
+
+	@Test
+	@DisplayName("저장 시 제약조건 예외가 1단계 cause가 아니면, 원본 예외를 그대로 던진다.")
+	void rethrowsDataIntegrityViolation_whenConstraintViolationIsNestedCause() {
+		// arrange
+		UserRepository userRepository = mock(UserRepository.class);
+		UserService userService = new UserService(userRepository);
+		when(userRepository.existsByUserId(any())).thenReturn(false);
+		when(userRepository.existsByEmail(any())).thenReturn(false);
+
+		ConstraintViolationException constraintViolation = new ConstraintViolationException(
+			"duplicate key",
+			new SQLException("duplicate"),
+			"uk_users_email"
+		);
+		DataIntegrityViolationException exception = new DataIntegrityViolationException(
+			"duplicate key",
+			new RuntimeException(constraintViolation)
+		);
+		when(userRepository.save(any(User.class))).thenThrow(exception);
+
+		// act
+		DataIntegrityViolationException result = assertThrows(
+			DataIntegrityViolationException.class,
+			() -> userService.register(UserId.of(USER_ID), Email.of(EMAIL), Birthday.of(BIRTHDAY), Gender.of(GENDER))
 		);
 
 		// assert

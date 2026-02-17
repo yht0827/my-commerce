@@ -12,19 +12,19 @@ public class ProductAggregateService {
 
 	private final ProductAggregateRepository productAggregateRepository;
 
-	public boolean incrementLikeCount(final Long productId) {
+	public boolean incrementLikeCount(final ProductId productId) {
 		return productAggregateRepository.incrementLikeCount(productId);
 	}
 
-	public boolean decrementLikeCount(final Long productId) {
+	public boolean decrementLikeCount(final ProductId productId) {
 		return productAggregateRepository.decrementLikeCount(productId);
 	}
 
-	public void createIfNotExists(final Long productId) {
+	public void createIfNotExists(final ProductId productId) {
 		// UPSERT 패턴 또는 존재 여부 체크 후 생성
 		if (!productAggregateRepository.existsByProductId(productId)) {
 			ProductAggregate productAggregate = ProductAggregate.builder()
-				.productId(new ProductId(productId))
+				.productId(productId)
 				.likeCount(LikeCount.Zero())
 				.build();
 

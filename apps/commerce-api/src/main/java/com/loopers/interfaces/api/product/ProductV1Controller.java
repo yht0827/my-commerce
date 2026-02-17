@@ -7,8 +7,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.loopers.application.product.GetProductDetailQuery;
 import com.loopers.application.product.GetProductListQuery;
-import com.loopers.application.product.ProductDetailResult;
 import com.loopers.application.product.ProductApplicationService;
+import com.loopers.application.product.ProductDetailResult;
 import com.loopers.application.product.ProductListResult;
 import com.loopers.interfaces.api.common.ApiResponse;
 

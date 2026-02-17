@@ -6,7 +6,6 @@ include(
     ":apps:commerce-streamer",
     ":modules:jpa",
     ":modules:redis",
-    ":modules:cache",
     ":modules:feign",
     ":modules:resilience",
     ":modules:kafka",

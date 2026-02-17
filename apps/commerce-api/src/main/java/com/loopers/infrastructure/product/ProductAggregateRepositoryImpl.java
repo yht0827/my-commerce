@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import com.loopers.domain.product.ProductAggregate;
 import com.loopers.domain.product.ProductAggregateRepository;
+import com.loopers.domain.product.ProductId;
 
 import lombok.RequiredArgsConstructor;
 
@@ -16,18 +17,18 @@ public class ProductAggregateRepositoryImpl implements ProductAggregateRepositor
 	private final ProductAggregateJpaRepository productAggregateJpaRepository;
 
 	@Override
-	public Optional<ProductAggregate> findByProductId(final Long productId) {
-		return productAggregateJpaRepository.findByProductId(productId);
+	public Optional<ProductAggregate> findByProductId(final ProductId productId) {
+		return productAggregateJpaRepository.findByProductId(productId.getProductId());
 	}
 
 	@Override
-	public Optional<ProductAggregate> findByProductIdWithOptimisticLock(final Long productId) {
-		return productAggregateJpaRepository.findByIdWithOptimisticLock(productId);
+	public Optional<ProductAggregate> findByProductIdWithOptimisticLock(final ProductId productId) {
+		return productAggregateJpaRepository.findByIdWithOptimisticLock(productId.getProductId());
 	}
 
 	@Override
-	public Optional<ProductAggregate> findByProductIdWithPessimisticLock(final Long productId) {
-		return productAggregateJpaRepository.findByIdWithPessimisticLock(productId);
+	public Optional<ProductAggregate> findByProductIdWithPessimisticLock(final ProductId productId) {
+		return productAggregateJpaRepository.findByIdWithPessimisticLock(productId.getProductId());
 	}
 
 	@Override
@@ -41,20 +42,20 @@ public class ProductAggregateRepositoryImpl implements ProductAggregateRepositor
 	}
 
 	@Override
-	public boolean incrementLikeCount(final Long productId) {
-		int updatedCount = productAggregateJpaRepository.incrementLikeCount(productId);
+	public boolean incrementLikeCount(final ProductId productId) {
+		int updatedCount = productAggregateJpaRepository.incrementLikeCount(productId.getProductId());
 		return updatedCount > 0;
 	}
 
 	@Override
-	public boolean decrementLikeCount(final Long productId) {
-		int updatedCount = productAggregateJpaRepository.decrementLikeCount(productId);
+	public boolean decrementLikeCount(final ProductId productId) {
+		int updatedCount = productAggregateJpaRepository.decrementLikeCount(productId.getProductId());
 		return updatedCount > 0;
 	}
 
 	@Override
-	public boolean existsByProductId(final Long productId) {
-		return productAggregateJpaRepository.existsByProductId(productId);
+	public boolean existsByProductId(final ProductId productId) {
+		return productAggregateJpaRepository.existsByProductId(productId.getProductId());
 	}
 
 }

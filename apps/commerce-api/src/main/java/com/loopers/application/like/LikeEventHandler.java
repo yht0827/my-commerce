@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import com.loopers.domain.product.ProductId;
 import com.loopers.domain.product.ProductAggregateService;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.event.ProductLikedEvent;
@@ -29,17 +30,18 @@ public class LikeEventHandler {
 			return;
 		}
 		ProductLikedEvent productLikedEvent = event.getPayload();
+		ProductId productId = ProductId.of(productLikedEvent.productId());
 
 		// Update Query로 원자적 처리
-		boolean success = productAggregateService.incrementLikeCount(productLikedEvent.productId());
+		boolean success = productAggregateService.incrementLikeCount(productId);
 
 		if (!success) {
 			log.warn("좋아요 수 업데이트 실패 - 상품 없음: {}", productLikedEvent.productId());
-			productAggregateService.createIfNotExists(productLikedEvent.productId());
-			productAggregateService.incrementLikeCount(productLikedEvent.productId());
+			productAggregateService.createIfNotExists(productId);
+			productAggregateService.incrementLikeCount(productId);
 		}
 
-		productService.evictProductRelatedCaches(productLikedEvent.productId());
+		productService.evictProductRelatedCaches(productId);
 	}
 
 	@Async
@@ -49,14 +51,15 @@ public class LikeEventHandler {
 			return;
 		}
 		ProductUnLikedEvent productUnLikedEvent = event.getPayload();
+		ProductId productId = ProductId.of(productUnLikedEvent.productId());
 
-		boolean success = productAggregateService.decrementLikeCount(productUnLikedEvent.productId());
+		boolean success = productAggregateService.decrementLikeCount(productId);
 
 		if (!success) {
 			log.warn("좋아요 취소 업데이트 실패: productId={}", productUnLikedEvent.productId());
 			return;
 		}
 
-		productService.evictProductRelatedCaches(productUnLikedEvent.productId());
+		productService.evictProductRelatedCaches(productId);
 	}
 }

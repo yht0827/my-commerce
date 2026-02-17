@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.loopers.domain.product.ProductInfo;
+import com.loopers.domain.product.ProductId;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.rank.RankingItem;
 import com.loopers.domain.rank.RankingPageData;
@@ -69,15 +70,17 @@ public class RankingService implements RankingUseCase {
 			return RankingPageResult.from(emptyPage, List.of());
 		}
 
-		List<Long> ids = page.getContent().stream()
+		List<ProductId> ids = page.getContent().stream()
 			.map(RankingItem::getProductId)
+			.filter(Objects::nonNull)
+			.map(ProductId::of)
 			.toList();
 
-		Map<Long, ProductInfo> productMap = productService.getProductByIds(ids);
+		Map<ProductId, ProductInfo> productMap = productService.getProductByIds(ids);
 
 		List<RankingProductResult> items = page.getContent().stream()
 			.map(item -> {
-				ProductInfo info = productMap.get(item.getProductId());
+				ProductInfo info = productMap.get(ProductId.of(item.getProductId()));
 				return info != null ? RankingProductResult.from(item, info) : null;
 			})
 			.filter(Objects::nonNull)

@@ -19,13 +19,13 @@ public class UserService {
 
 	private final UserRepository userRepository;
 
-	public User register(final String userId, final String email, final String birthday, final String gender) {
+	public User register(final UserId userId, final Email email, final Birthday birthday, final Gender gender) {
 
 		User user = User.create()
-			.userId(UserId.of(userId))
-			.email(Email.of(email))
-			.birthday(Birthday.of(birthday))
-			.gender(Gender.of(gender))
+			.userId(userId)
+			.email(email)
+			.birthday(birthday)
+			.gender(gender)
 			.build();
 
 		validateCreatePolicy(user);
@@ -33,11 +33,7 @@ public class UserService {
 		try {
 			return userRepository.save(user);
 		} catch (DataIntegrityViolationException e) {
-			CoreException conflictException = mapUserConflictException(e);
-			if (conflictException != null) {
-				throw conflictException;
-			}
-			throw e;
+			throw mapUserConflictException(e);
 		}
 	}
 
@@ -65,16 +61,16 @@ public class UserService {
 		}
 	}
 
-	private CoreException mapUserConflictException(final DataIntegrityViolationException e) {
+	private RuntimeException mapUserConflictException(final DataIntegrityViolationException e) {
 		if (!(e.getCause() instanceof ConstraintViolationException constraintViolation)) {
-			return null;
+			return e;
 		}
 
 		String constraintName = constraintViolation.getConstraintName();
-		if (constraintName != null && USER_ID_UNIQUE_CONSTRAINT.equalsIgnoreCase(constraintName)) {
+		if (USER_ID_UNIQUE_CONSTRAINT.equalsIgnoreCase(constraintName)) {
 			return new CoreException(CONFLICT, USER_ID_ALREADY_EXISTS.getMessage());
 		}
-		if (constraintName != null && USER_EMAIL_UNIQUE_CONSTRAINT.equalsIgnoreCase(constraintName)) {
+		if (USER_EMAIL_UNIQUE_CONSTRAINT.equalsIgnoreCase(constraintName)) {
 			return new CoreException(CONFLICT, EMAIL_ALREADY_EXISTS.getMessage());
 		}
 

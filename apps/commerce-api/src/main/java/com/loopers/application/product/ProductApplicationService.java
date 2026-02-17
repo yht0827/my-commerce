@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.loopers.domain.product.ProductCommand;
+import com.loopers.domain.product.ProductId;
 import com.loopers.domain.product.ProductInfo;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.rank.RankingQueryService;
@@ -26,9 +27,10 @@ public class ProductApplicationService {
 	}
 
 	public ProductDetailResult getProductDetail(final GetProductDetailQuery query) {
-		ProductInfo productInfo = productService.getProductDetail(query.productId());
+		ProductId productId = ProductId.of(query.productId());
+		ProductInfo productInfo = productService.getProductDetail(productId);
 
-		Long rank = rankingQueryService.getProductRanking(query.productId());
+		Long rank = rankingQueryService.getProductRanking(productId.getProductId());
 
 		return ProductDetailResult.from(productInfo, rank);
 	}

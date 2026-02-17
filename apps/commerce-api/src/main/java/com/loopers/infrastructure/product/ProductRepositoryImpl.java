@@ -17,6 +17,7 @@ import org.springframework.stereotype.Repository;
 import com.loopers.domain.brand.BrandId;
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductInfo;
+import com.loopers.domain.product.ProductId;
 import com.loopers.domain.product.ProductRepository;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
@@ -33,7 +34,7 @@ public class ProductRepositoryImpl implements ProductRepository {
 	private final JPAQueryFactory jpaQueryFactory;
 
 	@Override
-	public Optional<ProductInfo> findById(final Long id) {
+	public Optional<ProductInfo> findById(final ProductId id) {
 
 		ProductInfo productInfo = jpaQueryFactory.select(
 				Projections.constructor(
@@ -48,26 +49,26 @@ public class ProductRepositoryImpl implements ProductRepository {
 			.from(product)
 			.leftJoin(brand)
 			.on(product.brandId.brandId.eq(brand.id))
-			.leftJoin(productAggregate)
-			.on(productAggregate.productId.productId.eq(product.id))
-			.where(product.id.eq(id))
-			.fetchOne();
+				.leftJoin(productAggregate)
+				.on(productAggregate.productId.productId.eq(product.id))
+				.where(product.id.eq(id.getProductId()))
+				.fetchOne();
 
 		return Optional.ofNullable(productInfo);
 	}
 
 	@Override
-	public Optional<Product> findByIdWithPessimisticLock(Long id) {
-		return productJpaRepository.findByIdWithPessimisticLock(id);
+	public Optional<Product> findByIdWithPessimisticLock(final ProductId id) {
+		return productJpaRepository.findByIdWithPessimisticLock(id.getProductId());
 	}
 
 	@Override
-	public Optional<Product> findByIdWithOptimisticLock(Long id) {
-		return productJpaRepository.findByIdWithOptimisticLock(id);
+	public Optional<Product> findByIdWithOptimisticLock(final ProductId id) {
+		return productJpaRepository.findByIdWithOptimisticLock(id.getProductId());
 	}
 
 	@Override
-	public Page<ProductInfo> getProductList(final Long brandId, final Pageable pageable) {
+	public Page<ProductInfo> getProductList(final BrandId brandId, final Pageable pageable) {
 		return getProductListWithCoveringIndex(brandId, pageable);
 	}
 
@@ -77,15 +78,18 @@ public class ProductRepositoryImpl implements ProductRepository {
 	}
 
 	@Override
-	public List<ProductInfo> findInfosByIds(List<Long> ids) {
+	public List<ProductInfo> findInfosByIds(final List<ProductId> ids) {
 		if (ids == null || ids.isEmpty()) {
 			return Collections.emptyList();
 		}
-		return getProductInfosByIds(ids);
+		List<Long> productIds = ids.stream()
+			.map(ProductId::getProductId)
+			.toList();
+		return getProductInfosByIds(productIds);
 	}
 
 	// 커버링 인덱스를 사용한 최적화된 상품 목록 조회
-	private Page<ProductInfo> getProductListWithCoveringIndex(final Long brandId, final Pageable pageable) {
+	private Page<ProductInfo> getProductListWithCoveringIndex(final BrandId brandId, final Pageable pageable) {
 		// 커버링 인덱스로 ID만 조회
 		List<Long> productIds = getProductIdsWithCoveringIndex(brandId, pageable);
 
@@ -102,12 +106,11 @@ public class ProductRepositoryImpl implements ProductRepository {
 		return PageableExecutionUtils.getPage(productInfos, pageable, countQuery::fetchOne);
 	}
 
-	private List<Long> getProductIdsWithCoveringIndex(Long brandId, Pageable pageable) {
+	private List<Long> getProductIdsWithCoveringIndex(final BrandId brandId, final Pageable pageable) {
 		JPAQuery<Long> idQuery = jpaQueryFactory.select(product.id).from(product);
 
 		if (brandId != null) {
-			BrandId brand = new BrandId(brandId);
-			idQuery.where(product.brandId.eq(brand));
+			idQuery.where(product.brandId.eq(brandId));
 		}
 
 		boolean requiresLikeJoin = pageable.getSort().stream()
@@ -122,12 +125,11 @@ public class ProductRepositoryImpl implements ProductRepository {
 		return idQuery.offset(pageable.getOffset()).limit(pageable.getPageSize()).fetch();
 	}
 
-	private JPAQuery<Long> createCountQuery(Long brandId) {
+	private JPAQuery<Long> createCountQuery(final BrandId brandId) {
 		JPAQuery<Long> countQuery = jpaQueryFactory.select(product.count()).from(product);
 
 		if (brandId != null) {
-			BrandId brand = new BrandId(brandId);
-			countQuery.where(product.brandId.eq(brand));
+			countQuery.where(product.brandId.eq(brandId));
 		}
 
 		return countQuery;

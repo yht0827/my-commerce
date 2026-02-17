@@ -1,19 +1,18 @@
 package com.loopers.domain.product;
 
-import java.time.Duration;
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import org.springframework.data.domain.Page;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.github.benmanes.caffeine.cache.Cache;
 import com.loopers.domain.order.OrderItem;
 import com.loopers.domain.product.event.ProductOutOfStockEvent;
+import com.loopers.support.error.ErrorMessage;
 import com.loopers.support.cache.CacheablePage;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -27,193 +26,165 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ProductService {
 
-	private static final Duration L2_PRODUCT_LIST_TTL = Duration.ofMinutes(30);
-	private static final Duration L2_PRODUCT_DETAIL_TTL = Duration.ofMinutes(60);
-	private static final String CACHE_KEY_PREFIX_PRODUCT_LIST = "productList";
-	private static final String CACHE_KEY_PREFIX_PRODUCT_DETAIL = "productDetail";
+	private static final int MAX_CACHED_LIST_PAGE = 2;
 
 	private final ProductRepository productRepository;
-	private final Cache<String, Object> productL1Cache;
-	private final RedisTemplate<String, Object> productL2Cache;
+	private final ProductCacheRepository productCacheRepository;
 	private final EventPublisher eventPublisher;
 
-	@SuppressWarnings("unchecked")
 	public Page<ProductInfo> getProductList(final ProductCommand.GetProductList command) {
 		int pageNumber = command.pageable().getPageNumber();
 
-		// 1-3 페이지만 캐싱 처리
-		if (pageNumber >= 0 && pageNumber < 3) {
-			String cacheKey =
-				CACHE_KEY_PREFIX_PRODUCT_LIST + ":" + command.brandId() + ":" + command.pageable().getPageNumber() + ":"
-					+ command.pageable().getPageSize();
-
-			// L1 캐시 확인
-			Page<ProductInfo> l1Result = (Page<ProductInfo>)productL1Cache.getIfPresent(cacheKey);
-			if (l1Result != null) {
-				return l1Result;
-			}
-
-			// L2 캐시 확인
-			CacheablePage<ProductInfo> l2CacheResult = (CacheablePage<ProductInfo>)productL2Cache.opsForValue().get(cacheKey);
-			if (l2CacheResult != null) {
-				Page<ProductInfo> l2Result = l2CacheResult.toPage(command.pageable());
-				productL1Cache.put(cacheKey, l2Result);
-				return l2Result;
-			}
-
-			// 캐시 미스 - DB 조회 및 캐시 저장
-			Page<ProductInfo> dbResult = productRepository.getProductList(command.brandId(), command.pageable());
-
-			// 캐시 저장
-			CacheablePage<ProductInfo> cacheableResult = CacheablePage.from(dbResult);
-			productL2Cache.opsForValue().set(cacheKey, cacheableResult, L2_PRODUCT_LIST_TTL);
-			productL1Cache.put(cacheKey, dbResult);
-
-			return dbResult;
+		if (isListCacheable(pageNumber)) {
+			return productCacheRepository.findProductList(command.brandId(), command.pageable())
+				.map(cachedPage -> cachedPage.toPage(command.pageable()))
+				.orElseGet(() -> loadProductListFromDatabaseAndCache(command));
 		}
 
-		// 4페이지 이상은 캐시 없이 DB 직접 조회
 		return productRepository.getProductList(command.brandId(), command.pageable());
 	}
 
-	public ProductInfo getProductDetail(final Long productId) {
-		String cacheKey = CACHE_KEY_PREFIX_PRODUCT_DETAIL + ":" + productId;
-
-		// L1 캐시 확인 (Cache-Aside)
-		ProductInfo l1Result = (ProductInfo)productL1Cache.getIfPresent(cacheKey);
-		if (l1Result != null) {
-			return l1Result;
-		}
-
-		// L2 캐시 확인
-		ProductInfo l2Result = (ProductInfo)productL2Cache.opsForValue().get(cacheKey);
-		if (l2Result != null) {
-			// L1에 다시 저장
-			productL1Cache.put(cacheKey, l2Result);
-			return l2Result;
-		}
-
-		// 캐시 미스 - DB 조회 및 캐시 저장
-		log.debug("Cache miss: {}", cacheKey);
-		ProductInfo result = productRepository.findById(productId)
-			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "상품을 찾을 수 없습니다."));
-
-		// 캐시 저장 (Write-Through)
-		productL2Cache.opsForValue().set(cacheKey, result, L2_PRODUCT_DETAIL_TTL);
-		productL1Cache.put(cacheKey, result);
-
-		return result;
+	public ProductInfo getProductDetail(final ProductId productId) {
+		return productCacheRepository.findProductDetail(productId)
+			.orElseGet(() -> loadProductDetailFromDatabaseAndCache(productId));
 	}
 
 	@Transactional(readOnly = true)
-	public Map<Long, ProductInfo> getProductByIds(List<Long> productIds) {
+	public Map<ProductId, ProductInfo> getProductByIds(final List<ProductId> productIds) {
 		if (productIds == null || productIds.isEmpty()) {
 			return new HashMap<>();
 		}
 
-		Map<Long, ProductInfo> result = new HashMap<>();
-		List<Long> uncachedIds = new ArrayList<>();
-
-		int l1Hits = 0, l2Hits = 0;
-
-		for (Long productId : productIds) {
-			String cacheKey = CACHE_KEY_PREFIX_PRODUCT_DETAIL + ":" + productId;
-
-			// L1 캐시 확인
-			ProductInfo l1Result = (ProductInfo)productL1Cache.getIfPresent(cacheKey);
-			if (l1Result != null) {
-				result.put(productId, l1Result);
-				l1Hits++;
-				continue;
-			}
-
-			// L2 캐시 확인
-			ProductInfo l2Result = (ProductInfo)productL2Cache.opsForValue().get(cacheKey);
-
-			if (l2Result != null) {
-				productL1Cache.put(cacheKey, l2Result);
-				result.put(productId, l2Result);
-				l2Hits++;
-			} else {
-				uncachedIds.add(productId);
-			}
+		List<ProductId> uniqueProductIds = deduplicateProductIds(productIds);
+		if (uniqueProductIds.isEmpty()) {
+			return new HashMap<>();
 		}
 
-		// 캐시 미스 - DB 조회 및 캐시 저장
-		if (!uncachedIds.isEmpty()) {
-			List<ProductInfo> productInfos = productRepository.findInfosByIds(uncachedIds);
+		Map<ProductId, ProductInfo> result = new HashMap<>();
+		Map<ProductId, ProductInfo> cachedProducts = productCacheRepository.findProductDetailsByIds(uniqueProductIds);
+		result.putAll(cachedProducts);
 
-			for (ProductInfo productInfo : productInfos) {
-				String cacheKey = CACHE_KEY_PREFIX_PRODUCT_DETAIL + ":" + productInfo.productId();
+		List<ProductId> uncachedProductIds = uniqueProductIds.stream()
+			.filter(productId -> !cachedProducts.containsKey(productId))
+			.toList();
 
-				productL2Cache.opsForValue().set(cacheKey, productInfo, L2_PRODUCT_DETAIL_TTL);
-				productL1Cache.put(cacheKey, productInfo);
-
-				result.put(productInfo.productId(), productInfo);
-			}
+		if (!uncachedProductIds.isEmpty()) {
+			loadProductsByIdsFromDatabaseAndCache(uncachedProductIds, result);
 		}
 
 		if (log.isDebugEnabled()) {
-			log.debug("getProductByIds - Total: {}, L1 hits: {}, L2 hits: {}, DB queries: {}",
-				productIds.size(), l1Hits, l2Hits, uncachedIds.size());
+			log.debug("getProductByIds - requested: {}, unique: {}, redisHits: {}, cacheMisses: {}",
+				productIds.size(), uniqueProductIds.size(), cachedProducts.size(), uncachedProductIds.size());
 		}
 
 		return result;
 	}
 
-	public void deductStock(List<OrderItem> orderItems) {
-		for (OrderItem items : orderItems) {
-			Product product = productRepository.findByIdWithPessimisticLock(items.getId())
-				.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "상품을 찾을 수 없습니다."));
-
-			Long oldQuantity = product.getQuantity().getQuantity();
-
-			product.deduct(items.getQuantity());
-
-			// 품절 상태가 되었을 때만 이벤트 발행
-			if (oldQuantity > 0 && product.getQuantity().isOutOfStock()) {
-				ProductOutOfStockEvent event = ProductOutOfStockEvent.create(product.getId());
-				eventPublisher.publish(event);
-				log.info("품절 이벤트 발행: productId={}", product.getId());
-			}
+	public void deductStock(final List<OrderItem> orderItems) {
+		for (OrderItem item : orderItems) {
+			deductStockItem(item);
 		}
 	}
 
-	public void evictProductCache(Long productId) {
-		String cacheKey = CACHE_KEY_PREFIX_PRODUCT_DETAIL + ":" + productId;
-
-		try {
-			productL1Cache.invalidate(cacheKey);
-			productL2Cache.delete(cacheKey);
-			log.debug("상품 캐시 제거 완료 - productId: {}, key: {}", productId, cacheKey);
-		} catch (Exception e) {
-			log.warn("상품 캐시 제거 실패 - productId: {}, key: {}", productId, cacheKey, e);
-		}
+	public void evictProductCache(final ProductId productId) {
+		executeCacheEviction(
+			() -> productCacheRepository.evictProductDetail(productId),
+			() -> log.debug("상품 캐시 제거 완료 - productId: {}", productId.getProductId()),
+			e -> log.warn("상품 캐시 제거 실패 - productId: {}", productId.getProductId(), e)
+		);
 	}
 
 	public void evictProductListCache() {
-		try {
-			evictL1ProductListCaches();
+		executeCacheEviction(
+			productCacheRepository::evictProductList,
+			() -> log.debug("상품 리스트 캐시 제거 완료"),
+			e -> log.warn("상품 리스트 캐시 제거 실패", e)
+		);
+	}
 
-			String listKeyPattern = CACHE_KEY_PREFIX_PRODUCT_LIST + ":*";
-			productL2Cache.delete(listKeyPattern);
+	public void evictProductRelatedCaches(final ProductId productId) {
+		evictProductCache(productId);
+		evictProductListCache();
+	}
 
-			log.debug("상품 리스트 캐시 제거 완료 - pattern: {}", listKeyPattern);
-		} catch (Exception e) {
-			log.warn("상품 리스트 캐시 제거 실패", e);
+	private boolean isListCacheable(final int pageNumber) {
+		return pageNumber >= 0 && pageNumber <= MAX_CACHED_LIST_PAGE;
+	}
+
+	private Page<ProductInfo> loadProductListFromDatabaseAndCache(final ProductCommand.GetProductList command) {
+		Page<ProductInfo> dbResult = productRepository.getProductList(command.brandId(), command.pageable());
+		productCacheRepository.saveProductList(command.brandId(), command.pageable(), CacheablePage.from(dbResult));
+		return dbResult;
+	}
+
+	private ProductInfo loadProductDetailFromDatabaseAndCache(final ProductId productId) {
+		log.debug("Product detail cache miss: productId={}", productId.getProductId());
+		ProductInfo productInfo = productRepository.findById(productId)
+			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, ErrorMessage.PRODUCT_NOT_FOUND.format(productId.getProductId())));
+		productCacheRepository.saveProductDetail(productId, productInfo);
+		return productInfo;
+	}
+
+	private void loadProductsByIdsFromDatabaseAndCache(
+		final List<ProductId> uncachedProductIds,
+		final Map<ProductId, ProductInfo> result
+	) {
+		List<ProductInfo> productInfos = productRepository.findInfosByIds(uncachedProductIds);
+		productCacheRepository.saveProductDetails(productInfos);
+		for (ProductInfo productInfo : productInfos) {
+			result.put(ProductId.of(productInfo.productId()), productInfo);
 		}
 	}
 
-	void evictL1ProductListCaches() {
-		productL1Cache.asMap()
-			.keySet()
-			.stream()
-			.filter(key -> key.startsWith(CACHE_KEY_PREFIX_PRODUCT_LIST + ":"))
-			.forEach(productL1Cache::invalidate);
+	private void deductStockItem(final OrderItem item) {
+		ProductId productId = item.getProductId();
+		Product product = findProductWithPessimisticLock(productId);
+		long oldQuantity = product.getQuantity().getQuantity();
+
+		product.deduct(item.getQuantity());
+		publishOutOfStockEventIfNeeded(productId, oldQuantity, product.getQuantity().isOutOfStock());
 	}
 
-	public void evictProductRelatedCaches(Long productId) {
-		evictProductCache(productId);
-		evictProductListCache();
+	private Product findProductWithPessimisticLock(final ProductId productId) {
+		return productRepository.findByIdWithPessimisticLock(productId)
+			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, ErrorMessage.PRODUCT_NOT_FOUND.format(productId.getProductId())));
+	}
+
+	private void publishOutOfStockEventIfNeeded(
+		final ProductId productId,
+		final long oldQuantity,
+		final boolean outOfStock
+	) {
+		if (oldQuantity <= 0 || !outOfStock) {
+			return;
+		}
+
+		ProductOutOfStockEvent event = ProductOutOfStockEvent.create(productId.getProductId());
+		eventPublisher.publish(event);
+		log.info("품절 이벤트 발행: productId={}", productId.getProductId());
+	}
+
+	private void executeCacheEviction(
+		final Runnable evictionAction,
+		final Runnable onSuccess,
+		final Consumer<Exception> onFailure
+	) {
+		try {
+			evictionAction.run();
+			onSuccess.run();
+		} catch (Exception e) {
+			onFailure.accept(e);
+		}
+	}
+
+	private List<ProductId> deduplicateProductIds(final List<ProductId> productIds) {
+		Map<Long, ProductId> uniqueById = new LinkedHashMap<>();
+		for (ProductId productId : productIds) {
+			if (productId == null) {
+				continue;
+			}
+			uniqueById.putIfAbsent(productId.getProductId(), productId);
+		}
+		return List.copyOf(uniqueById.values());
 	}
 }

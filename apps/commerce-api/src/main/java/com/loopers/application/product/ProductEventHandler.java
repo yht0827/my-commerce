@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import com.loopers.domain.product.ProductId;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.event.ProductOutOfStockEvent;
 import com.loopers.support.event.Envelope;
@@ -27,7 +28,7 @@ public class ProductEventHandler {
 		}
 		ProductOutOfStockEvent stockDepletedEvent = event.getPayload();
 		try {
-			productService.evictProductRelatedCaches(stockDepletedEvent.productId());
+			productService.evictProductRelatedCaches(ProductId.of(stockDepletedEvent.productId()));
 		} catch (Exception e) {
 			log.error("품절 이벤트 처리 실패: productId={}", stockDepletedEvent.productId(), e);
 		}
