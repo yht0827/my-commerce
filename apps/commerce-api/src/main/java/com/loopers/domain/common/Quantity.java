@@ -1,9 +1,11 @@
 package com.loopers.domain.common;
 
+import static com.loopers.support.error.ErrorMessage.*;
+import static com.loopers.support.error.ErrorType.*;
+
 import java.io.Serializable;
 
 import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -21,7 +23,7 @@ public class Quantity implements Serializable {
 
 	public Quantity(Long quantity) {
 		if (quantity == null || quantity < 0) {
-			throw new CoreException(ErrorType.BAD_REQUEST, "수량은 0 이상이어야 합니다.");
+			throw new CoreException(BAD_REQUEST, QUANTITY_INVALID.format());
 		}
 		this.quantity = quantity;
 	}
@@ -32,7 +34,7 @@ public class Quantity implements Serializable {
 
 	public Quantity subtractWithValidation(Quantity amount) {
 		if (!isSufficient(amount)) {
-			throw new CoreException(ErrorType.BAD_REQUEST, "재고가 충분하지 않습니다.");
+			throw new CoreException(BAD_REQUEST, INSUFFICIENT_STOCK.format());
 		}
 		return new Quantity(this.quantity - amount.quantity);
 	}

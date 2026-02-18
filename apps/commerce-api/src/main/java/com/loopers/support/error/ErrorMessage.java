@@ -17,8 +17,12 @@ public enum ErrorMessage {
 	USER_NAME_INVALID_FORMAT("사용자 이름은 한글, 영문만 가능하며 %d자 이내여야 합니다."),
 	EMAIL_INVALID_FORMAT("유효하지 않은 이메일 형식입니다."),
 	GENDER_INVALID("유효하지 않은 성별입니다."),
+	PRICE_INVALID("가격은 0 이상이어야 합니다."),
+	QUANTITY_INVALID("수량은 0 이상이어야 합니다."),
+	INSUFFICIENT_STOCK("재고가 충분하지 않습니다."),
 
 	PRODUCT_NOT_FOUND("해당 상품 ID '%s'의 상품을 찾을 수 없습니다."),
+	STOCK_NOT_FOUND("해당 상품 ID '%s'의 재고가 존재하지 않습니다."),
 	POINT_NOT_FOUND("해당 사용자 ID '%s'의 포인트가 존재하지 않습니다."),
 	POINT_BALANCE_REQUIRED("포인트 금액은 필수입니다."),
 	POINT_BALANCE_INVALID("포인트 금액은 %d보다 커야 합니다.");

@@ -76,3 +76,17 @@ CREATE TABLE IF NOT EXISTS products
     CONSTRAINT fk_products_brand_id FOREIGN KEY (brand_id) REFERENCES brands (id)
 ) DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS stocks
+(
+    id         BIGINT      NOT NULL AUTO_INCREMENT,
+    product_id BIGINT      NOT NULL,
+    quantity   BIGINT      NOT NULL DEFAULT 0,
+    created_at DATETIME(6) NOT NULL,
+    updated_at DATETIME(6) NOT NULL,
+    deleted_at DATETIME(6) NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_stocks_product_id UNIQUE (product_id),
+    CONSTRAINT fk_stocks_product_id FOREIGN KEY (product_id) REFERENCES products (id)
+) DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci;
