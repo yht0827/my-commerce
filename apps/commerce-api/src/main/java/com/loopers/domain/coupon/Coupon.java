@@ -58,7 +58,7 @@ public class Coupon extends BaseEntity {
 
 	@Builder
 	public Coupon(UserId userId, ProductId productId, BrandId brandId, CouponName couponName, DiscountValue discountValue,
-		MaxDisCountAmount maxDiscountAmount, CouponType couponType, CouponIssuedAt couponIssuedAt, CouponUsedAt couponUsedAt,
+		MaxDiscountAmount maxDiscountAmount, CouponType couponType, CouponIssuedAt couponIssuedAt, CouponUsedAt couponUsedAt,
 		CouponExpiredAt couponExpiredAt, CouponStatus couponStatus) {
 		this.userId = userId;
 		this.productId = productId;
@@ -76,7 +76,7 @@ public class Coupon extends BaseEntity {
 		this.couponStatus = CouponStatus.USED;
 	}
 
-	public Long calculateDisCount(final Long amount) {
+	public Long calculateDiscount(final Long amount) {
 		return discountPolicy.calculate(amount);
 	}
 
@@ -84,9 +84,9 @@ public class Coupon extends BaseEntity {
 		if (couponStatus == CouponStatus.USED) {
 			throw new CoreException(ErrorType.BAD_REQUEST, "이미 사용된 쿠폰입니다.");
 		}
-		Long discountAmount = calculateDisCount(totalOrderPrice.getTotalPrice());
+		Long discountAmount = calculateDiscount(totalOrderPrice.getTotalPrice());
 		markAsUsed();
-		return new CouponDiscountAmount(discountAmount);
+		return CouponDiscountAmount.of(discountAmount);
 	}
 
 }

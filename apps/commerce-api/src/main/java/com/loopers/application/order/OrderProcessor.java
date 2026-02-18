@@ -32,7 +32,7 @@ public class OrderProcessor {
 
 		TotalOrderPrice totalOrderPrice = orderService.calculateTotalOrderPrice(items);
 
-		CouponDiscountAmount couponDiscountAmount = couponService.applyDiscounts(data.couponId(), totalOrderPrice);
+		CouponDiscountAmount couponDiscountAmount = couponService.applyDiscount(data.couponId(), totalOrderPrice);
 
 		return orderService.createOrder(data, items, totalOrderPrice, couponDiscountAmount);
 	}

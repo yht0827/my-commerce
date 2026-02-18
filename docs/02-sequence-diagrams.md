@@ -9,6 +9,7 @@
 - [상품 (Product)](#상품-product)
 - [브랜드 (Brand)](#브랜드-brand)
 - [좋아요 (Like)](#좋아요-like)
+- [쿠폰 (Coupon)](#쿠폰-coupon)
 - [주문 (Order)](#주문-order)
 
 ---
@@ -392,6 +393,70 @@ sequenceDiagram
         Server-->>Client: 200 OK (상품 목록)
         Client-->>User: 좋아요 목록 화면 표시
     end
+```
+
+---
+
+## 쿠폰 (Coupon)
+
+### 주문 시 쿠폰 적용
+
+`POST /api/v1/orders`
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as 사용자
+    participant Client as 클라이언트
+    participant Server as API 서버
+    participant DB as Database
+
+    User->>Client: 주문 화면에서 쿠폰 선택 (선택사항)
+    Client->>Server: POST /api/v1/orders<br/>[Header: X-USER-ID]<br/>{items, couponId, cardType, cardNo, callbackUrl}
+
+    alt couponId 없음
+        Server->>Server: 쿠폰 할인 0원 처리
+    else couponId 있음
+        Server->>DB: 쿠폰 조회 (PESSIMISTIC WRITE LOCK)
+
+        alt 쿠폰 미존재
+            DB-->>Server: 조회 결과 없음
+            Server-->>Client: 404 Not Found
+            Client-->>User: "쿠폰이 존재하지 않습니다"
+        else 쿠폰 존재
+            Server->>Server: 쿠폰 사용 여부 검증
+
+            alt 이미 사용됨
+                Server-->>Client: 400 Bad Request
+                Client-->>User: "이미 사용된 쿠폰입니다"
+            else 사용 가능
+                Server->>Server: 할인 금액 계산
+                Server->>DB: 쿠폰 상태 USED / used_at 갱신
+                DB-->>Server: 갱신 완료
+            end
+        end
+    end
+
+    Server->>DB: 주문/주문상품 저장
+    DB-->>Server: 저장 완료
+    Server-->>Client: 201 Created
+    Client-->>User: 주문 완료 화면 표시
+```
+
+#### 쿠폰 처리 SQL 예시
+
+```sql
+SELECT id, coupon_status, discount_value, max_discount_amount, coupon_type
+FROM coupons
+WHERE id = :couponId
+FOR UPDATE;
+
+UPDATE coupons
+SET coupon_status = 'USED',
+    used_at = NOW(6),
+    version = version + 1,
+    updated_at = NOW(6)
+WHERE id = :couponId;
 ```
 
 ---

@@ -22,12 +22,13 @@ public class DiscountPolicy implements Serializable {
 	private DiscountValue discountValue;
 
 	@Embedded
-	private MaxDisCountAmount maxDiscountAmount;
+	private MaxDiscountAmount maxDiscountAmount;
 
 	@Enumerated(EnumType.STRING)
 	private CouponType couponType;
 
-	public DiscountPolicy(DiscountValue discountValue, MaxDisCountAmount maxDiscountAmount, CouponType couponType) {
+	public DiscountPolicy(final DiscountValue discountValue, final MaxDiscountAmount maxDiscountAmount,
+		final CouponType couponType) {
 		if (discountValue == null) {
 			throw new CoreException(ErrorType.BAD_REQUEST, "할인 값이 설정되지 않았습니다.");
 		}
@@ -39,9 +40,9 @@ public class DiscountPolicy implements Serializable {
 		this.couponType = couponType;
 	}
 
-	public Long calculate(Long amount) {
+	public Long calculate(final Long amount) {
 		if (amount == null || amount < 0) {
-			throw new IllegalArgumentException("할인 계산 대상 금액은 0 이상이어야 합니다.");
+			throw new CoreException(ErrorType.BAD_REQUEST, "할인 계산 대상 금액은 0 이상이어야 합니다.");
 		}
 
 		Long discount = (couponType == CouponType.FIXED_AMOUNT)

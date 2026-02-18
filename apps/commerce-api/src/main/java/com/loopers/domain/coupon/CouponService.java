@@ -15,10 +15,17 @@ public class CouponService {
 
 	private final CouponRepository couponRepository;
 
-	public CouponDiscountAmount applyDiscounts(Long couponId, TotalOrderPrice totalOrderPrice) {
-		Coupon coupon = couponRepository.findById(couponId)
+	public CouponDiscountAmount applyDiscount(final Long couponId, final TotalOrderPrice totalOrderPrice) {
+		if (couponId == null) {
+			return CouponDiscountAmount.of(0L);
+		}
+
+		Coupon coupon = couponRepository.findByIdWithPessimisticLock(couponId)
 			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "해당 [id = " + couponId + "]의 쿠폰이 존재하지 않습니다."));
 
-		return coupon.applyDiscount(totalOrderPrice);
+		CouponDiscountAmount couponDiscountAmount = coupon.applyDiscount(totalOrderPrice);
+		couponRepository.save(coupon);
+
+		return couponDiscountAmount;
 	}
 }

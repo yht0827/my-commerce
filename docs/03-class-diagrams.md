@@ -10,6 +10,7 @@
 - [상품 (Product)](#상품-product)
 - [브랜드 (Brand)](#브랜드-brand)
 - [좋아요 (Like)](#좋아요-like)
+- [쿠폰 (Coupon)](#쿠폰-coupon)
 - [주문 (Order)](#주문-order)
 
 ---
@@ -23,11 +24,14 @@ classDiagram
     User "1" --> "*" Point : has
     User "1" --> "*" PointHistory : has
     User "1" --> "*" Like : has
+    User "1" --> "*" Coupon : owns
     User "1" --> "*" Order : places
 
     Brand "1" --> "*" Product : owns
+    Brand "1" --> "*" Coupon : issues
     Product "1" --> "*" Like : receives
     Product "1" --> "1" Stock : has
+    Product "1" --> "*" Coupon : issues
     Product "1" --> "*" OrderItem : included in
 
     Order "1" --> "*" OrderItem : contains
@@ -337,6 +341,82 @@ classDiagram
     LikeService --> ProductRepository
 ```
 
+---
+
+## 쿠폰 (Coupon)
+
+```mermaid
+classDiagram
+    class Coupon {
+        -Long id
+        -UserId userId
+        -ProductId productId
+        -BrandId brandId
+        -CouponName couponName
+        -DiscountPolicy discountPolicy
+        -CouponIssuedAt couponIssuedAt
+        -CouponUsedAt couponUsedAt
+        -CouponExpiredAt couponExpiredAt
+        -CouponStatus couponStatus
+        +markAsUsed() void
+        +calculateDiscount(amount) Long
+        +applyDiscount(totalOrderPrice) CouponDiscountAmount
+    }
+
+    class DiscountPolicy {
+        -DiscountValue discountValue
+        -MaxDiscountAmount maxDiscountAmount
+        -CouponType couponType
+        +calculate(amount) Long
+    }
+
+    class DiscountValue {
+        -Long discountValue
+        +calculateFixedDiscount(amount) Long
+        +calculatePercentageDiscount(amount) Long
+    }
+
+    class MaxDiscountAmount {
+        -Long maxDiscountAmount
+        +applyMaxDiscountLimit(calculatedDiscount) Long
+        +hasLimit() boolean
+    }
+
+    class CouponType {
+        <<enumeration>>
+        FIXED_AMOUNT
+        PERCENTAGE
+    }
+
+    class CouponStatus {
+        <<enumeration>>
+        ACTIVE
+        INACTIVE
+        EXPIRED
+        USED
+    }
+
+    class CouponRepository {
+        <<interface>>
+        +findById(id) Optional~Coupon~
+        +findByIdWithPessimisticLock(id) Optional~Coupon~
+        +findByIdWithOptimisticLock(id) Optional~Coupon~
+        +save(coupon) Coupon
+    }
+
+    class CouponService {
+        -CouponRepository couponRepository
+        +applyDiscount(couponId, totalOrderPrice) CouponDiscountAmount
+    }
+
+    Coupon --> DiscountPolicy
+    DiscountPolicy --> DiscountValue
+    DiscountPolicy --> MaxDiscountAmount
+    DiscountPolicy --> CouponType
+    Coupon --> CouponStatus
+    CouponService --> CouponRepository
+    CouponService --> Coupon
+```
 ---
 
 ## 주문 (Order)

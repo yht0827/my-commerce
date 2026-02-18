@@ -13,6 +13,7 @@
   - [product](#product)
   - [stock](#stock)
   - [likes](#likes)
+  - [coupons](#coupons)
   - [orders](#orders)
   - [order_item](#order_item)
   - [payment](#payment)
@@ -26,12 +27,15 @@ erDiagram
     users ||--o{ points : has
     users ||--o{ point_histories : has
     users ||--o{ likes : creates
+    users ||--o{ coupons : owns
     users ||--o{ orders : places
 
     brands ||--o{ product : owns
+    brands ||--o{ coupons : issues
 
     product ||--|| stock : has
     product ||--o{ likes : receives
+    product ||--o{ coupons : issues
     product ||--o{ order_item : included_in
 
     orders ||--o{ order_item : contains
@@ -102,6 +106,25 @@ erDiagram
         varchar user_id FK "사용자 ID"
         bigint product_id FK "상품 ID"
         datetime created_at "생성일시"
+    }
+
+    coupons {
+        bigint id PK
+        varchar user_id FK "사용자 ID"
+        bigint product_id FK "상품 ID"
+        bigint brand_id FK "브랜드 ID"
+        varchar coupon_name "쿠폰명"
+        bigint discount_value "할인 값"
+        bigint max_discount_amount "최대 할인 금액"
+        varchar coupon_type "쿠폰 타입 (FIXED_AMOUNT/PERCENTAGE)"
+        datetime issued_at "발급일시"
+        datetime used_at "사용일시"
+        datetime expired_at "만료일시"
+        varchar coupon_status "상태 (ACTIVE/INACTIVE/EXPIRED/USED)"
+        bigint version "낙관적 락 버전"
+        datetime created_at "생성일시"
+        datetime updated_at "수정일시"
+        datetime deleted_at "삭제일시(소프트 삭제)"
     }
 
     orders {
@@ -287,6 +310,43 @@ erDiagram
 
 ---
 
+### coupons
+
+> 쿠폰 테이블
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+|--------|------|----------|------|
+| id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
+| user_id | VARCHAR(20) | FK, NOT NULL | 쿠폰 소유 사용자 ID |
+| product_id | BIGINT | FK, NOT NULL | 대상 상품 ID |
+| brand_id | BIGINT | FK, NOT NULL | 대상 브랜드 ID |
+| coupon_name | VARCHAR(255) | NOT NULL | 쿠폰명 |
+| discount_value | BIGINT | NOT NULL | 할인 값 |
+| max_discount_amount | BIGINT | NOT NULL | 최대 할인 금액 |
+| coupon_type | VARCHAR(20) | NOT NULL | 쿠폰 타입 (FIXED_AMOUNT/PERCENTAGE) |
+| issued_at | DATETIME(6) | NOT NULL | 발급일시 |
+| used_at | DATETIME(6) | NOT NULL | 사용일시 |
+| expired_at | DATETIME(6) | NOT NULL | 만료일시 |
+| coupon_status | VARCHAR(20) | NOT NULL | 상태 (ACTIVE/INACTIVE/EXPIRED/USED) |
+| version | BIGINT | NOT NULL, DEFAULT 0 | 낙관적 락 버전 |
+| created_at | DATETIME(6) | NOT NULL | 생성일시 |
+| updated_at | DATETIME(6) | NOT NULL | 수정일시 |
+| deleted_at | DATETIME(6) | NULL | 삭제일시(소프트 삭제) |
+
+**인덱스**
+- `idx_coupons_user_id`: user_id
+- `idx_coupons_product_id`: product_id
+- `idx_coupons_brand_id`: brand_id
+- `idx_coupons_status`: coupon_status
+- `idx_coupons_expired_at`: expired_at
+
+**외래키**
+- `fk_coupons_user`: user_id → users(user_id)
+- `fk_coupons_product`: product_id → product(id)
+- `fk_coupons_brand`: brand_id → brands(id)
+
+---
+
 ### orders
 
 > 주문 테이블
@@ -448,6 +508,34 @@ CREATE TABLE likes (
     INDEX idx_likes_product_id (product_id),
     CONSTRAINT fk_likes_user FOREIGN KEY (user_id) REFERENCES users(user_id),
     CONSTRAINT fk_likes_product FOREIGN KEY (product_id) REFERENCES product(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- coupons
+CREATE TABLE coupons (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(20) NOT NULL,
+    product_id BIGINT NOT NULL,
+    brand_id BIGINT NOT NULL,
+    coupon_name VARCHAR(255) NOT NULL,
+    discount_value BIGINT NOT NULL,
+    max_discount_amount BIGINT NOT NULL,
+    coupon_type VARCHAR(20) NOT NULL,
+    issued_at DATETIME(6) NOT NULL,
+    used_at DATETIME(6) NOT NULL,
+    expired_at DATETIME(6) NOT NULL,
+    coupon_status VARCHAR(20) NOT NULL,
+    version BIGINT NOT NULL DEFAULT 0,
+    created_at DATETIME(6) NOT NULL,
+    updated_at DATETIME(6) NOT NULL,
+    deleted_at DATETIME(6) NULL,
+    INDEX idx_coupons_user_id (user_id),
+    INDEX idx_coupons_product_id (product_id),
+    INDEX idx_coupons_brand_id (brand_id),
+    INDEX idx_coupons_status (coupon_status),
+    INDEX idx_coupons_expired_at (expired_at),
+    CONSTRAINT fk_coupons_user FOREIGN KEY (user_id) REFERENCES users(user_id),
+    CONSTRAINT fk_coupons_product FOREIGN KEY (product_id) REFERENCES product(id),
+    CONSTRAINT fk_coupons_brand FOREIGN KEY (brand_id) REFERENCES brands(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- orders

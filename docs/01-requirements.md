@@ -11,6 +11,7 @@
 - [상품 (Product)](#상품-product)
 - [브랜드 (Brand)](#브랜드-brand)
 - [좋아요 (Like)](#좋아요-like)
+- [쿠폰 (Coupon)](#쿠폰-coupon)
 - [주문 (Order)](#주문-order)
 
 ---
@@ -27,6 +28,7 @@
 | 브랜드      | Brand        | 상품을 판매하는 주체                                   |
 | 주문        | Order        | 사용자가 상품을 구매하기 위해 생성하는 요청 단위       |
 | 주문 항목   | OrderItem    | 하나의 주문에 포함된 개별 상품 및 수량                 |
+| 쿠폰        | Coupon       | 주문 시 할인 혜택을 적용하기 위한 식별자/정책 단위     |
 | 좋아요      | Like         | 회원이 특정 상품에 대해 선호를 표현한 상태             |
 | 재고        | Stock        | 상품의 판매 가능한 수량                                |
 | 포인트      | Point        | 회원이 보유하고 결제 시 사용할 수 있는 자산            |
@@ -52,6 +54,7 @@
 | **좋아요** | 좋아요 등록      | POST   | `/api/v1/like/products/{productId}` | O    |
 |            | 좋아요 취소      | DELETE | `/api/v1/like/products/{productId}` | O    |
 |            | 좋아요 목록 조회 | GET    | `/api/v1/like/products`             | O    |
+| **쿠폰**   | 주문 시 쿠폰 적용 | POST   | `/api/v1/orders`                    | O    |
 | **주문**   | 주문 생성        | POST   | `/api/v1/orders`                    | O    |
 |            | 주문 목록 조회   | GET    | `/api/v1/orders`                    | O    |
 |            | 주문 상세 조회   | GET    | `/api/v1/orders/{orderId}`          | O    |
@@ -513,6 +516,66 @@
 
 ---
 
+## 쿠폰 (Coupon)
+
+### 주문 시 쿠폰 적용
+
+
+| METHOD | URI              | 설명                  | 인증 |
+| ------ | ---------------- | --------------------- | ---- |
+| POST   | `/api/v1/orders` | 주문 시 쿠폰 적용(선택) | 필요 |
+
+#### 기능적 요구사항
+
+- 사용자는 주문 요청 시 `couponId`를 포함해 쿠폰을 적용할 수 있다.
+- `couponId`가 없으면 쿠폰 할인 금액은 `0`으로 처리된다.
+- `couponId`가 있으면 쿠폰을 조회하고 할인 정책(`FIXED_AMOUNT`/`PERCENTAGE`, 최대 할인 금액)을 적용한다.
+- 쿠폰 적용 성공 시 쿠폰 상태는 `USED`로 변경되고 사용 시각이 기록된다.
+- 이미 사용된 쿠폰은 다시 사용할 수 없다.
+
+#### 비기능적 요구사항
+
+- 쿠폰 조회/사용 처리 과정은 동시성 충돌을 피하기 위해 잠금 기반으로 처리되어야 한다.
+- 쿠폰 사용 처리와 주문 생성은 같은 트랜잭션 흐름에서 처리되어야 한다.
+
+#### Happy Path
+
+```
+1. 전제조건: 사용자는 로그인 한 상태이며 주문 가능한 상품을 선택함
+2. (사용자) 주문 화면에서 쿠폰을 선택함(선택사항)
+3. (클라이언트) 서버에 주문 생성 요청 시 couponId를 함께 전달
+4. (서버) couponId 존재 시 쿠폰 조회 및 할인 정책 계산
+5. (서버) 쿠폰 상태를 USED로 갱신
+6. (서버) 할인 금액이 반영된 주문 생성 처리 진행
+7. (클라이언트) 주문 완료 화면 표시
+```
+
+#### Request Body (쿠폰 포함)
+
+```json
+{
+  "items": [
+    { "productId": 1, "quantity": 2, "price": 10000 },
+    { "productId": 3, "quantity": 1, "price": 5000 }
+  ],
+  "couponId": 101,
+  "cardType": "SAMSUNG",
+  "cardNo": "1111-2222-3333-4444",
+  "callbackUrl": "https://example.com/payments/callback"
+}
+```
+
+#### Fail Cases
+
+
+| 케이스        | 설명                                     | HTTP 상태코드     |
+| ------------- | ---------------------------------------- | ----------------- |
+| 쿠폰 미존재   | 전달한 couponId에 해당하는 쿠폰이 없음   | `404 NOT FOUND`   |
+| 쿠폰 재사용   | 이미 사용된 쿠폰으로 재요청              | `400 BAD REQUEST` |
+| 서버 오류     | DB 연결 실패 등                          | `500 INTERNAL SERVER ERROR` |
+
+---
+
 ## 주문 (Order)
 
 ### 주문 생성
@@ -568,9 +631,13 @@
 ```json
 {
   "items": [
-    { "productId": 1, "quantity": 2 },
-    { "productId": 3, "quantity": 1 }
-  ]
+    { "productId": 1, "quantity": 2, "price": 10000 },
+    { "productId": 3, "quantity": 1, "price": 5000 }
+  ],
+  "couponId": 101,
+  "cardType": "SAMSUNG",
+  "cardNo": "1111-2222-3333-4444",
+  "callbackUrl": "https://example.com/payments/callback"
 }
 ```
 
@@ -585,6 +652,8 @@
 | 판매중 아님    | 상품이 판매중 상태가 아님 | `400 BAD REQUEST`           |
 | 재고 부족      | 상품 재고가 부족함        | `400 BAD REQUEST`           |
 | 포인트 부족    | 보유 포인트가 부족함      | `400 BAD REQUEST`           |
+| 쿠폰 미존재    | 전달한 couponId에 해당하는 쿠폰이 없음 | `404 NOT FOUND` |
+| 쿠폰 재사용    | 이미 사용된 쿠폰으로 주문 시도 | `400 BAD REQUEST` |
 | 상품 개수 초과 | 주문 상품이 50개 초과     | `400 BAD REQUEST`           |
 | 서버 오류      | DB 연결 실패 등           | `500 INTERNAL SERVER ERROR` |
 

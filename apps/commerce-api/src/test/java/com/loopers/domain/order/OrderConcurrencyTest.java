@@ -76,7 +76,7 @@ public class OrderConcurrencyTest {
 		ZonedDateTime randomExpiredAt = ZonedDateTime.now().plusDays(daysInFuture);
 
 		coupon = new Coupon(new UserId("yht0827"), new ProductId(1L), new BrandId(1L),
-			new CouponName("쿠폰1"), new DiscountValue(100L), new MaxDisCountAmount(0L), CouponType.FIXED_AMOUNT,
+			new CouponName("쿠폰1"), new DiscountValue(100L), new MaxDiscountAmount(0L), CouponType.FIXED_AMOUNT,
 			new CouponIssuedAt(randomIssuedAt), new CouponUsedAt(ZonedDateTime.now()),
 			new CouponExpiredAt(randomExpiredAt), CouponStatus.ACTIVE);
 
