@@ -77,6 +77,24 @@ CREATE TABLE IF NOT EXISTS products
 ) DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci;
 
+CREATE TABLE IF NOT EXISTS likes
+(
+    id         BIGINT      NOT NULL AUTO_INCREMENT,
+    user_id    VARCHAR(20) NOT NULL,
+    product_id BIGINT      NOT NULL,
+    version    BIGINT      NULL,
+    created_at DATETIME(6) NOT NULL,
+    updated_at DATETIME(6) NOT NULL,
+    deleted_at DATETIME(6) NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_likes_user_product UNIQUE (user_id, product_id),
+    INDEX idx_likes_user_id_created_at (user_id, created_at DESC),
+    INDEX idx_likes_product_id (product_id),
+    CONSTRAINT fk_likes_user_id FOREIGN KEY (user_id) REFERENCES users (user_id),
+    CONSTRAINT fk_likes_product_id FOREIGN KEY (product_id) REFERENCES products (id)
+) DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci;
+
 CREATE TABLE IF NOT EXISTS stocks
 (
     id         BIGINT      NOT NULL AUTO_INCREMENT,

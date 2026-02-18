@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.loopers.application.like.LikeCommand;
 import com.loopers.application.like.LikeFacade;
+import com.loopers.application.like.LikeQuery;
 import com.loopers.application.like.LikeResult;
 import com.loopers.interfaces.api.common.ApiResponse;
 
@@ -24,20 +26,23 @@ public class LikeV1Controller {
 
 	@PostMapping("/products/{productId}")
 	public ApiResponse<LikeResponse> likeProduct(@RequestHeader final String userId, @PathVariable final Long productId) {
-		LikeResult likeResult = likeFacade.likeProduct(userId, productId);
+		LikeCommand.LikeProduct command = new LikeCommand.LikeProduct(userId, productId);
+		LikeResult likeResult = likeFacade.likeProduct(command);
 		LikeResponse response = LikeResponse.from(likeResult);
 		return ApiResponse.success(response);
 	}
 
 	@DeleteMapping("/products/{productId}")
 	public ApiResponse<Void> unlikeProduct(@PathVariable Long productId, @RequestHeader final String userId) {
-		likeFacade.unlikeProduct(userId, productId);
+		LikeCommand.UnlikeProduct command = new LikeCommand.UnlikeProduct(userId, productId);
+		likeFacade.unlikeProduct(command);
 		return ApiResponse.success(null);
 	}
 
 	@GetMapping("/products")
 	public ApiResponse<List<LikeResponse>> getLikedProductList(@RequestHeader final String userId) {
-		List<LikeResult> likedProductList = likeFacade.getLikedProductList(userId);
+		LikeQuery.GetLikedProducts query = new LikeQuery.GetLikedProducts(userId);
+		List<LikeResult> likedProductList = likeFacade.getLikedProductList(query);
 
 		List<LikeResponse> response = likedProductList.stream().map(LikeResponse::from).toList();
 

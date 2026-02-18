@@ -290,39 +290,39 @@ sequenceDiagram
     autonumber
     actor User as 사용자
     participant Client as 클라이언트
-    participant Server as API 서버
+    participant Controller as LikeV1Controller
+    participant Facade as LikeFacade
+    participant Service as LikeService
+    participant Repository as LikeRepository
     participant DB as Database
+    participant EventBus as EventPublisher
+    participant Kafka as LikeEventPublisher
 
     User->>Client: 좋아요 버튼 클릭
-    Client->>Server: POST /api/v1/like/products/{productId}<br/>[Header: X-USER-ID]
+    Client->>Controller: POST /api/v1/like/products/{productId}<br/>[Header: X-USER-ID]
+    Controller->>Controller: LikeCommand.LikeProduct 생성
+    Controller->>Facade: likeProduct(command)
+    Facade->>Service: likeProduct(command.toData())
+    Service->>Repository: findByUserIdAndProductId(userId, productId)
+    Repository->>DB: SELECT likes by user_id + product_id
 
-    Server->>Server: X-USER-ID 헤더 검증
-
-    alt 인증 실패
-        Server-->>Client: 401 Unauthorized
-        Client-->>User: 로그인 필요 안내
-    else 인증 성공
-        Server->>DB: 상품 존재 여부 확인
-
-        alt 상품 미존재
-            DB-->>Server: 조회 결과 없음
-            Server-->>Client: 404 Not Found
-            Client-->>User: "상품을 찾을 수 없습니다"
-        else 상품 존재
-            Server->>DB: 좋아요 존재 여부 확인
-
-            alt 이미 좋아요 함
-                DB-->>Server: 좋아요 존재
-                Server-->>Client: 200 OK (멱등성 보장)
-                Client-->>User: 좋아요 상태 유지
-            else 좋아요 없음
-                Server->>DB: 좋아요 저장
-                Server->>DB: 상품 좋아요 수 증가
-                DB-->>Server: 처리 완료
-                Server-->>Client: 200 OK
-                Client-->>User: 좋아요 UI 업데이트
-            end
-        end
+    alt 이미 좋아요 존재
+        DB-->>Repository: row 반환
+        Repository-->>Service: Optional.of(Like)
+        Service-->>Facade: CoreException(BAD_REQUEST)
+        Facade-->>Controller: 예외 전파
+        Controller-->>Client: 400 Bad Request
+    else 좋아요 없음
+        DB-->>Repository: empty
+        Service->>Repository: save(Like.create(userId, productId))
+        Repository->>DB: INSERT INTO likes
+        DB-->>Repository: saved like
+        Repository-->>Service: Like
+        Service-->>Facade: LikeInfo
+        Facade->>EventBus: publish(ProductLikedEvent)
+        Facade->>Kafka: publishLike(userId, productId)
+        Facade-->>Controller: LikeResult
+        Controller-->>Client: 200 OK
     end
 ```
 
@@ -337,31 +337,39 @@ sequenceDiagram
     autonumber
     actor User as 사용자
     participant Client as 클라이언트
-    participant Server as API 서버
+    participant Controller as LikeV1Controller
+    participant Facade as LikeFacade
+    participant Service as LikeService
+    participant Repository as LikeRepository
     participant DB as Database
+    participant EventBus as EventPublisher
+    participant Kafka as LikeEventPublisher
 
     User->>Client: 좋아요 버튼 클릭 (취소)
-    Client->>Server: DELETE /api/v1/like/products/{productId}<br/>[Header: X-USER-ID]
+    Client->>Controller: DELETE /api/v1/like/products/{productId}<br/>[Header: X-USER-ID]
+    Controller->>Controller: LikeCommand.UnlikeProduct 생성
+    Controller->>Facade: unlikeProduct(command)
+    Facade->>Service: unlikeProduct(command.toData())
+    Service->>Repository: findByUserIdAndProductId(userId, productId)
+    Repository->>DB: SELECT likes by user_id + product_id
 
-    Server->>Server: X-USER-ID 헤더 검증
-
-    alt 인증 실패
-        Server-->>Client: 401 Unauthorized
-        Client-->>User: 로그인 필요 안내
-    else 인증 성공
-        Server->>DB: 좋아요 존재 여부 확인
-
-        alt 좋아요 없음
-            DB-->>Server: 좋아요 미존재
-            Server-->>Client: 200 OK (멱등성 보장)
-            Client-->>User: 좋아요 해제 상태 유지
-        else 좋아요 존재
-            Server->>DB: 좋아요 삭제
-            Server->>DB: 상품 좋아요 수 감소
-            DB-->>Server: 처리 완료
-            Server-->>Client: 200 OK
-            Client-->>User: 좋아요 해제 UI 업데이트
-        end
+    alt 좋아요 미존재
+        DB-->>Repository: empty
+        Repository-->>Service: Optional.empty
+        Service-->>Facade: CoreException(NOT_FOUND)
+        Facade-->>Controller: 예외 전파
+        Controller-->>Client: 404 Not Found
+    else 좋아요 존재
+        DB-->>Repository: row 반환
+        Repository-->>Service: Optional.of(Like)
+        Service->>Repository: delete(like)
+        Repository->>DB: DELETE FROM likes
+        DB-->>Repository: deleted
+        Service-->>Facade: success
+        Facade->>EventBus: publish(ProductUnLikedEvent)
+        Facade->>Kafka: publishUnlike(userId, productId)
+        Facade-->>Controller: success
+        Controller-->>Client: 200 OK
     end
 ```
 
@@ -376,23 +384,25 @@ sequenceDiagram
     autonumber
     actor User as 사용자
     participant Client as 클라이언트
-    participant Server as API 서버
+    participant Controller as LikeV1Controller
+    participant Facade as LikeFacade
+    participant Service as LikeService
+    participant Repository as LikeRepository
     participant DB as Database
 
     User->>Client: 좋아요 목록 페이지 접근
-    Client->>Server: GET /api/v1/like/products<br/>[Header: X-USER-ID]
-
-    Server->>Server: X-USER-ID 헤더 검증
-
-    alt 인증 실패
-        Server-->>Client: 401 Unauthorized
-        Client-->>User: 로그인 필요 안내
-    else 인증 성공
-        Server->>DB: 좋아요 상품 목록 조회 (최신순)
-        DB-->>Server: 좋아요 상품 목록
-        Server-->>Client: 200 OK (상품 목록)
-        Client-->>User: 좋아요 목록 화면 표시
-    end
+    Client->>Controller: GET /api/v1/like/products<br/>[Header: X-USER-ID]
+    Controller->>Controller: LikeQuery.GetLikedProducts 생성
+    Controller->>Facade: getLikedProductList(query)
+    Facade->>Service: getLikedProductList(query.toData())
+    Service->>Repository: findAllByUserId(userId)
+    Repository->>DB: SELECT likes by user_id
+    DB-->>Repository: like rows
+    Repository-->>Service: List<Like>
+    Service-->>Facade: List<LikeInfo>
+    Facade-->>Controller: List<LikeResult>
+    Controller-->>Client: 200 OK (상품 목록)
+    Client-->>User: 좋아요 목록 화면 표시
 ```
 
 ---

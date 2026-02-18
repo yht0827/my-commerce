@@ -5,12 +5,10 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.loopers.domain.like.Like;
+import com.loopers.domain.like.LikeInfo;
 import com.loopers.domain.like.LikeService;
-import com.loopers.domain.product.ProductId;
 import com.loopers.domain.product.event.ProductLikedEvent;
 import com.loopers.domain.product.event.ProductUnLikedEvent;
-import com.loopers.domain.user.UserId;
 import com.loopers.infrastructure.like.LikeEventPublisher;
 import com.loopers.support.event.EventPublisher;
 
@@ -25,40 +23,28 @@ public class LikeFacade {
 	private final EventPublisher eventPublisher;
 	private final LikeEventPublisher likeEventPublisher;
 
-	public LikeResult likeProduct(final String userId, final Long productId) {
+	public LikeResult likeProduct(final LikeCommand.LikeProduct command) {
+		LikeInfo likeInfo = likeService.likeProduct(command.toData());
 
-		final UserId uid = UserId.of(userId);
-		final ProductId pid = ProductId.of(productId);
-
-		Like like = likeService.likeProduct(uid, pid);
-
-		ProductLikedEvent event = ProductLikedEvent.create(userId, productId);
+		ProductLikedEvent event = ProductLikedEvent.create(command.userId(), command.productId());
 		eventPublisher.publish(event);
 		likeEventPublisher.publishLike(event.userId(), event.productId());
 
-		return LikeResult.from(like);
+		return LikeResult.from(likeInfo);
 	}
 
-	public void unlikeProduct(final String userId, final Long productId) {
+	public void unlikeProduct(final LikeCommand.UnlikeProduct command) {
+		likeService.unlikeProduct(command.toData());
 
-		final UserId uid = UserId.of(userId);
-		final ProductId pid = ProductId.of(productId);
-
-		likeService.unlikeProduct(uid, pid);
-
-		ProductUnLikedEvent event = ProductUnLikedEvent.create(userId, productId);
+		ProductUnLikedEvent event = ProductUnLikedEvent.create(command.userId(), command.productId());
 		eventPublisher.publish(event);
 		likeEventPublisher.publishUnlike(event.userId(), event.productId());
 	}
 
 	@Transactional(readOnly = true)
-	public List<LikeResult> getLikedProductList(final String userId) {
-
-		final UserId uid = UserId.of(userId);
-
-		List<Like> likeList = likeService.getAllLikedProductIds(uid);
-
-		return likeList.stream()
+	public List<LikeResult> getLikedProductList(final LikeQuery.GetLikedProducts query) {
+		return likeService.getLikedProductList(query.toData())
+			.stream()
 			.map(LikeResult::from)
 			.toList();
 	}

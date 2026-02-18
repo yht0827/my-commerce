@@ -14,7 +14,7 @@ public interface LikeRepository {
 
 	Optional<Like> findByUserId(final UserId userId);
 
-	List<Like> getAllLikedByUserId(final UserId userId);
+	List<Like> findAllByUserId(final UserId userId);
 
 	Optional<Like> findByUserIdAndProductId(final UserId userId, final ProductId productId);
 

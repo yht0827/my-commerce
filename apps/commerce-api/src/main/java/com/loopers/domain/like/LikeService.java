@@ -10,16 +10,17 @@ import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class LikeService {
 
 	private final LikeRepository likeRepository;
 
-	public Like likeProduct(final UserId userId, final ProductId productId) {
+	public LikeInfo likeProduct(final LikeData.LikeProduct data) {
+
+		final UserId userId = UserId.of(data.userId());
+		final ProductId productId = ProductId.of(data.productId());
 
 		// 이미 좋아요를 눌렀는지 확인
 		if (likeRepository.findByUserIdAndProductId(userId, productId).isPresent()) {
@@ -27,22 +28,28 @@ public class LikeService {
 		}
 
 		// 좋아요 정보 저장
-		Like productLike = new Like(userId, productId);
+		Like productLike = Like.create(userId, productId);
+		Like savedLike = likeRepository.save(productLike);
 
-		return likeRepository.save(productLike);
+		return LikeInfo.from(savedLike);
 	}
 
-	public void unlikeProduct(final UserId userId, final ProductId productId) {
+	public void unlikeProduct(final LikeData.UnlikeProduct data) {
+		final UserId userId = UserId.of(data.userId());
+		final ProductId productId = ProductId.of(data.productId());
+
 		Like productLike = likeRepository.findByUserIdAndProductId(userId, productId)
 			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "좋아요 정보를 찾을 수 없습니다."));
 
 		likeRepository.delete(productLike);
 	}
 
-	public List<Like> getAllLikedProductIds(final UserId userId) {
-		return likeRepository.getAllLikedByUserId(userId)
+	public List<LikeInfo> getLikedProductList(final LikeData.GetLikedProducts data) {
+		final UserId userId = UserId.of(data.userId());
+
+		return likeRepository.findAllByUserId(userId)
 			.stream()
-			.map(Like::from)
+			.map(LikeInfo::from)
 			.toList();
 	}
 }

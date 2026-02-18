@@ -297,7 +297,10 @@ erDiagram
 | id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
 | user_id | VARCHAR(20) | FK, NOT NULL | 사용자 ID |
 | product_id | BIGINT | FK, NOT NULL | 상품 ID |
-| created_at | DATETIME | NOT NULL | 생성일시 |
+| version | BIGINT | NULL | 낙관적 락 버전 |
+| created_at | DATETIME(6) | NOT NULL | 생성일시 |
+| updated_at | DATETIME(6) | NOT NULL | 수정일시 |
+| deleted_at | DATETIME(6) | NULL | 삭제일시(소프트 삭제) |
 
 **인덱스**
 - `uk_likes_user_product` (UNIQUE): (user_id, product_id)
@@ -306,7 +309,7 @@ erDiagram
 
 **외래키**
 - `fk_likes_user`: user_id → users(user_id)
-- `fk_likes_product`: product_id → product(id)
+- `fk_likes_product`: product_id → products(id)
 
 ---
 
@@ -502,12 +505,15 @@ CREATE TABLE likes (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(20) NOT NULL,
     product_id BIGINT NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT NULL,
+    created_at DATETIME(6) NOT NULL,
+    updated_at DATETIME(6) NOT NULL,
+    deleted_at DATETIME(6) NULL,
     UNIQUE KEY uk_likes_user_product (user_id, product_id),
     INDEX idx_likes_user_id_created_at (user_id, created_at DESC),
     INDEX idx_likes_product_id (product_id),
-    CONSTRAINT fk_likes_user FOREIGN KEY (user_id) REFERENCES users(user_id),
-    CONSTRAINT fk_likes_product FOREIGN KEY (product_id) REFERENCES product(id)
+    CONSTRAINT fk_likes_user_id FOREIGN KEY (user_id) REFERENCES users(user_id),
+    CONSTRAINT fk_likes_product_id FOREIGN KEY (product_id) REFERENCES products(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- coupons

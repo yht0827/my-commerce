@@ -303,42 +303,78 @@ classDiagram
 
 ```mermaid
 classDiagram
-    class Like {
-        -Long id
-        -Long userId
-        -Long productId
-        -LocalDateTime createdAt
+    class LikeV1Controller {
+        -LikeFacade likeFacade
+        +likeProduct(userId, productId) ApiResponse
+        +unlikeProduct(productId, userId) ApiResponse
+        +getLikedProductList(userId) ApiResponse
+    }
+
+    class LikeFacade {
+        -LikeService likeService
+        -EventPublisher eventPublisher
+        -LikeEventPublisher likeEventPublisher
+        +likeProduct(command) LikeResult
+        +unlikeProduct(command) void
+        +getLikedProductList(query) List~LikeResult~
+    }
+
+    class LikeCommand {
+        <<record>>
+        +LikeProduct
+        +UnlikeProduct
+    }
+
+    class LikeQuery {
+        <<record>>
+        +GetLikedProducts
+    }
+
+    class LikeData {
+        <<record>>
+        +LikeProduct
+        +UnlikeProduct
+        +GetLikedProducts
+    }
+
+    class LikeService {
+        -LikeRepository likeRepository
+        +likeProduct(data) LikeInfo
+        +unlikeProduct(data) void
+        +getLikedProductList(data) List~LikeInfo~
     }
 
     class LikeInfo {
-        <<DTO>>
+        <<record>>
+        +String userId
         +Long productId
-        +String productName
-        +Long price
-        +LocalDateTime likedAt
     }
 
     class LikeRepository {
         <<interface>>
         +save(like) Like
         +delete(like) void
+        +findAllByUserId(userId) List~Like~
         +findByUserIdAndProductId(userId, productId) Optional~Like~
-        +findByUserIdOrderByCreatedAtDesc(userId) List~Like~
-        +existsByUserIdAndProductId(userId, productId) boolean
     }
 
-    class LikeService {
-        -LikeRepository likeRepository
-        -ProductRepository productRepository
-        -UserRepository userRepository
-        +addLike(userId, productId) void
-        +removeLike(userId, productId) void
-        +getLikedProducts(userId) List~LikeInfo~
+    class Like {
+        -Long id
+        -UserId userId
+        -ProductId productId
+        -Long version
+        +create(userId, productId) Like
     }
 
-    Like ..> LikeInfo : maps to
+    LikeV1Controller --> LikeFacade
+    LikeV1Controller --> LikeCommand
+    LikeV1Controller --> LikeQuery
+    LikeFacade --> LikeService
+    LikeCommand --> LikeData
+    LikeQuery --> LikeData
     LikeService --> LikeRepository
-    LikeService --> ProductRepository
+    LikeService ..> LikeInfo : maps to
+    LikeRepository --> Like
 ```
 
 ---

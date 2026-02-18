@@ -33,7 +33,7 @@ public class LikeRepositoryImpl implements LikeRepository {
 	}
 
 	@Override
-	public List<Like> getAllLikedByUserId(final UserId userId) {
+	public List<Like> findAllByUserId(final UserId userId) {
 		return likeJpaRepository.findAllByUserId(userId);
 	}
 

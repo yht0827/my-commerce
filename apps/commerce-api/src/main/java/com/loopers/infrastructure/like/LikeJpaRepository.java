@@ -17,16 +17,16 @@ public interface LikeJpaRepository extends JpaRepository<Like, Long> {
 
 	Optional<Like> findByUserId(final UserId userId);
 
-	List<Like> findAllByUserId(UserId userId);
+	List<Like> findAllByUserId(final UserId userId);
 
-	@Query("SELECT l FROM Like l WHERE l.productId = :productId AND l.userId = :userId")
-	Optional<Like> findByUserIdAndProductId(UserId userId, ProductId productId);
+	@Query("SELECT l FROM Like l WHERE l.userId = :userId AND l.productId = :productId")
+	Optional<Like> findByUserIdAndProductId(final UserId userId, final ProductId productId);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	@Query("SELECT l FROM Like l WHERE l.productId = :productId AND l.userId = :userId")
-	Optional<Like> findByUserIdAndProductIdWithPessimisticLock(UserId userId, ProductId productId);
+	@Query("SELECT l FROM Like l WHERE l.userId = :userId AND l.productId = :productId")
+	Optional<Like> findByUserIdAndProductIdWithPessimisticLock(final UserId userId, final ProductId productId);
 
 	@Lock(LockModeType.OPTIMISTIC)
-	@Query("SELECT l FROM Like l WHERE l.productId = :productId AND l.userId = :userId")
-	Optional<Like> findByUserIdAndProductIdWithOptimisticLock(UserId userId, ProductId productId);
+	@Query("SELECT l FROM Like l WHERE l.userId = :userId AND l.productId = :productId")
+	Optional<Like> findByUserIdAndProductIdWithOptimisticLock(final UserId userId, final ProductId productId);
 }

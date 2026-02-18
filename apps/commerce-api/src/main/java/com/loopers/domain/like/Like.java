@@ -34,7 +34,7 @@ public class Like extends BaseEntity {
 		this.productId = productId;
 	}
 
-	public Like from() {
+	public static Like create(final UserId userId, final ProductId productId) {
 		return Like.builder()
 			.userId(userId)
 			.productId(productId)

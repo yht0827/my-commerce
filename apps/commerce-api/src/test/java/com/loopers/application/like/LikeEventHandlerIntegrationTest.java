@@ -46,7 +46,7 @@ class LikeEventHandlerIntegrationTest {
 		doReturn(true).when(productAggregateService).incrementLikeCount(any(ProductId.class));
 
 		// When
-		likeFacade.likeProduct(userId, productId);
+		likeFacade.likeProduct(new LikeCommand.LikeProduct(userId, productId));
 
 		// Then - 비동기 이벤트 처리 대기
 		await()
@@ -70,7 +70,7 @@ class LikeEventHandlerIntegrationTest {
 		doReturn(true).when(productAggregateService).decrementLikeCount(any(ProductId.class));
 
 		// When
-		likeFacade.unlikeProduct(userId, productId);
+		likeFacade.unlikeProduct(new LikeCommand.UnlikeProduct(userId, productId));
 
 		// Then - 비동기 이벤트 처리 대기
 		await()
@@ -95,7 +95,7 @@ class LikeEventHandlerIntegrationTest {
 		doReturn(false, true).when(productAggregateService).incrementLikeCount(any(ProductId.class));
 
 		// When
-		likeFacade.likeProduct(userId, productId);
+		likeFacade.likeProduct(new LikeCommand.LikeProduct(userId, productId));
 
 		// Then - 비동기 이벤트 처리 대기
 		await()
@@ -121,13 +121,13 @@ class LikeEventHandlerIntegrationTest {
 		String userId = "yht0827";
 		Long productId = 300L;
 
-		Like like = new Like(UserId.of(userId), ProductId.of(productId));
+		Like like = Like.create(UserId.of(userId), ProductId.of(productId));
 		likeRepository.save(like);
 
 		doReturn(false).when(productAggregateService).decrementLikeCount(any(ProductId.class));
 
 		// When
-		likeFacade.unlikeProduct(userId, productId);
+		likeFacade.unlikeProduct(new LikeCommand.UnlikeProduct(userId, productId));
 
 		// Then - 비동기 이벤트 처리 대기
 		await()
