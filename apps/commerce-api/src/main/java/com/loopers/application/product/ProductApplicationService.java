@@ -4,7 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.loopers.domain.product.ProductCommand;
+import com.loopers.domain.product.ProductData;
 import com.loopers.domain.product.ProductId;
 import com.loopers.domain.product.ProductInfo;
 import com.loopers.domain.product.ProductService;
@@ -21,8 +21,8 @@ public class ProductApplicationService {
 	private final RankingQueryService rankingQueryService;
 
 	public ProductListResult getProductList(final GetProductListQuery query) {
-		ProductCommand.GetProductList command = query.toCommand();
-		Page<ProductInfo> products = productService.getProductList(command);
+		ProductData.GetProductList data = query.toData();
+		Page<ProductInfo> products = productService.getProductList(data);
 		return ProductListResult.from(products);
 	}
 

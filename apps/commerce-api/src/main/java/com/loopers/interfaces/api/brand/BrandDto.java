@@ -7,7 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public record BrandDto() {
 
 	public record V1() {
-		public record BrandResponse(
+		public record BrandDetailResponse(
 			@Schema(description = "브랜드 ID", example = "1")
 			Long brandId,
 			@Schema(description = "브랜드명", example = "나이키")
@@ -17,8 +17,8 @@ public record BrandDto() {
 			@Schema(description = "브랜드 로고 URL", example = "https://cdn.example.com/logo/nike.png")
 			String logoUrl
 		) {
-			public static BrandResponse from(final BrandResult brandResult) {
-				return new BrandResponse(
+			public static BrandDetailResponse from(final BrandResult brandResult) {
+				return new BrandDetailResponse(
 					brandResult.brandId(),
 					brandResult.brandName(),
 					brandResult.description(),

@@ -47,8 +47,8 @@ public class UserV1ApiE2ETest {
         @Test
         void returnsExampleInfo_whenValidIdIsProvided() {
             // arrange
-            UserDto.V1.UserRequest request = createUserRequest();
-            HttpEntity<UserDto.V1.UserRequest> requestEntity = new HttpEntity<>(request);
+            UserDto.V1.CreateUserRequest request = createUserRequest();
+            HttpEntity<UserDto.V1.CreateUserRequest> requestEntity = new HttpEntity<>(request);
 
             // act
             ResponseEntity<ApiResponse<UserDto.V1.UserResponse>> response = createUser(requestEntity);
@@ -74,8 +74,8 @@ public class UserV1ApiE2ETest {
         @Test
         void returnsBadRequest_whenGenderIsNull() {
             // arrange
-            UserDto.V1.UserRequest request = new UserDto.V1.UserRequest(TEST_USER_ID, TEST_EMAIL, TEST_BIRTHDAY, null);
-            HttpEntity<UserDto.V1.UserRequest> requestEntity = new HttpEntity<>(request);
+            UserDto.V1.CreateUserRequest request = new UserDto.V1.CreateUserRequest(TEST_USER_ID, TEST_EMAIL, TEST_BIRTHDAY, null);
+            HttpEntity<UserDto.V1.CreateUserRequest> requestEntity = new HttpEntity<>(request);
 
             // act
             ResponseEntity<Object> response =
@@ -89,12 +89,12 @@ public class UserV1ApiE2ETest {
         @Test
         void returnsConflict_whenUserIdAlreadyExists() {
             // arrange
-            HttpEntity<UserDto.V1.UserRequest> first = new HttpEntity<>(createUserRequest());
+            HttpEntity<UserDto.V1.CreateUserRequest> first = new HttpEntity<>(createUserRequest());
             createUser(first);
 
-            UserDto.V1.UserRequest duplicateRequest =
-                new UserDto.V1.UserRequest(TEST_USER_ID, "another@naver.com", TEST_BIRTHDAY, TEST_GENDER);
-            HttpEntity<UserDto.V1.UserRequest> duplicate = new HttpEntity<>(duplicateRequest);
+            UserDto.V1.CreateUserRequest duplicateRequest =
+                new UserDto.V1.CreateUserRequest(TEST_USER_ID, "another@naver.com", TEST_BIRTHDAY, TEST_GENDER);
+            HttpEntity<UserDto.V1.CreateUserRequest> duplicate = new HttpEntity<>(duplicateRequest);
 
             // act
             ResponseEntity<Object> response =
@@ -108,12 +108,12 @@ public class UserV1ApiE2ETest {
         @Test
         void returnsConflict_whenEmailAlreadyExists() {
             // arrange
-            HttpEntity<UserDto.V1.UserRequest> first = new HttpEntity<>(createUserRequest());
+            HttpEntity<UserDto.V1.CreateUserRequest> first = new HttpEntity<>(createUserRequest());
             createUser(first);
 
-            UserDto.V1.UserRequest duplicateRequest =
-                new UserDto.V1.UserRequest("newuser01", TEST_EMAIL, TEST_BIRTHDAY, TEST_GENDER);
-            HttpEntity<UserDto.V1.UserRequest> duplicate = new HttpEntity<>(duplicateRequest);
+            UserDto.V1.CreateUserRequest duplicateRequest =
+                new UserDto.V1.CreateUserRequest("newuser01", TEST_EMAIL, TEST_BIRTHDAY, TEST_GENDER);
+            HttpEntity<UserDto.V1.CreateUserRequest> duplicate = new HttpEntity<>(duplicateRequest);
 
             // act
             ResponseEntity<Object> response =
@@ -131,8 +131,8 @@ public class UserV1ApiE2ETest {
         @Test
         void returnsUserInfo_whenIdExists() {
             // arrange
-            UserDto.V1.UserRequest postRequest = createUserRequest();
-            HttpEntity<UserDto.V1.UserRequest> postRequestEntity = new HttpEntity<>(postRequest);
+            UserDto.V1.CreateUserRequest postRequest = createUserRequest();
+            HttpEntity<UserDto.V1.CreateUserRequest> postRequestEntity = new HttpEntity<>(postRequest);
             ResponseEntity<ApiResponse<UserDto.V1.UserResponse>> postResponse = createUser(postRequestEntity);
             assertThat(postResponse.getBody()).isNotNull();
             assertThat(postResponse.getBody().data()).isNotNull();
@@ -193,11 +193,11 @@ public class UserV1ApiE2ETest {
 	        }
     }
 
-    private UserDto.V1.UserRequest createUserRequest() {
-        return new UserDto.V1.UserRequest(TEST_USER_ID, TEST_EMAIL, TEST_BIRTHDAY, TEST_GENDER);
+    private UserDto.V1.CreateUserRequest createUserRequest() {
+        return new UserDto.V1.CreateUserRequest(TEST_USER_ID, TEST_EMAIL, TEST_BIRTHDAY, TEST_GENDER);
     }
 
-    private ResponseEntity<ApiResponse<UserDto.V1.UserResponse>> createUser(HttpEntity<UserDto.V1.UserRequest> requestEntity) {
+    private ResponseEntity<ApiResponse<UserDto.V1.UserResponse>> createUser(HttpEntity<UserDto.V1.CreateUserRequest> requestEntity) {
         ParameterizedTypeReference<ApiResponse<UserDto.V1.UserResponse>> responseType = new ParameterizedTypeReference<>() {
         };
         return testRestTemplate.exchange("/api/v1/users", HttpMethod.POST, requestEntity, responseType);

@@ -12,9 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.loopers.domain.order.OrderItem;
 import com.loopers.domain.product.event.ProductOutOfStockEvent;
-import com.loopers.support.error.ErrorMessage;
 import com.loopers.support.cache.CacheablePage;
 import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorMessage;
 import com.loopers.support.error.ErrorType;
 import com.loopers.support.event.EventPublisher;
 
@@ -32,16 +32,16 @@ public class ProductService {
 	private final ProductCacheRepository productCacheRepository;
 	private final EventPublisher eventPublisher;
 
-	public Page<ProductInfo> getProductList(final ProductCommand.GetProductList command) {
-		int pageNumber = command.pageable().getPageNumber();
+	public Page<ProductInfo> getProductList(final ProductData.GetProductList data) {
+		int pageNumber = data.pageable().getPageNumber();
 
 		if (isListCacheable(pageNumber)) {
-			return productCacheRepository.findProductList(command.brandId(), command.pageable())
-				.map(cachedPage -> cachedPage.toPage(command.pageable()))
-				.orElseGet(() -> loadProductListFromDatabaseAndCache(command));
+			return productCacheRepository.findProductList(data.brandId(), data.pageable())
+				.map(cachedPage -> cachedPage.toPage(data.pageable()))
+				.orElseGet(() -> loadProductListFromDatabaseAndCache(data));
 		}
 
-		return productRepository.getProductList(command.brandId(), command.pageable());
+		return productRepository.getProductList(data.brandId(), data.pageable());
 	}
 
 	public ProductInfo getProductDetail(final ProductId productId) {
@@ -111,16 +111,17 @@ public class ProductService {
 		return pageNumber >= 0 && pageNumber <= MAX_CACHED_LIST_PAGE;
 	}
 
-	private Page<ProductInfo> loadProductListFromDatabaseAndCache(final ProductCommand.GetProductList command) {
-		Page<ProductInfo> dbResult = productRepository.getProductList(command.brandId(), command.pageable());
-		productCacheRepository.saveProductList(command.brandId(), command.pageable(), CacheablePage.from(dbResult));
+	private Page<ProductInfo> loadProductListFromDatabaseAndCache(final ProductData.GetProductList data) {
+		Page<ProductInfo> dbResult = productRepository.getProductList(data.brandId(), data.pageable());
+		productCacheRepository.saveProductList(data.brandId(), data.pageable(), CacheablePage.from(dbResult));
 		return dbResult;
 	}
 
 	private ProductInfo loadProductDetailFromDatabaseAndCache(final ProductId productId) {
 		log.debug("Product detail cache miss: productId={}", productId.getProductId());
 		ProductInfo productInfo = productRepository.findById(productId)
-			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, ErrorMessage.PRODUCT_NOT_FOUND.format(productId.getProductId())));
+			.orElseThrow(
+				() -> new CoreException(ErrorType.NOT_FOUND, ErrorMessage.PRODUCT_NOT_FOUND.format(productId.getProductId())));
 		productCacheRepository.saveProductDetail(productId, productInfo);
 		return productInfo;
 	}
@@ -147,7 +148,8 @@ public class ProductService {
 
 	private Product findProductWithPessimisticLock(final ProductId productId) {
 		return productRepository.findByIdWithPessimisticLock(productId)
-			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, ErrorMessage.PRODUCT_NOT_FOUND.format(productId.getProductId())));
+			.orElseThrow(
+				() -> new CoreException(ErrorType.NOT_FOUND, ErrorMessage.PRODUCT_NOT_FOUND.format(productId.getProductId())));
 	}
 
 	private void publishOutOfStockEventIfNeeded(

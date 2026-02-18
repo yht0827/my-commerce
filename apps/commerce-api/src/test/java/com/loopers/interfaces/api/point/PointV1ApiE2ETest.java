@@ -67,10 +67,10 @@ public class PointV1ApiE2ETest {
             pointJpaRepository.save(new Point(new UserId(TEST_USER_ID), balance));
 
             // act
-            ResponseEntity<ApiResponse<PointDto.V1.BalanceResponse>> response = getPointBalance();
+            ResponseEntity<ApiResponse<PointDto.V1.PointBalanceResponse>> response = getPointBalance();
 
             // assert
-            PointDto.V1.BalanceResponse responseData = response.getBody().data();
+            PointDto.V1.PointBalanceResponse responseData = response.getBody().data();
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
             assertThat(response.getBody()).isNotNull();
@@ -86,9 +86,9 @@ public class PointV1ApiE2ETest {
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
             // act
-            ParameterizedTypeReference<ApiResponse<PointDto.V1.BalanceResponse>> responseType = new ParameterizedTypeReference<>() {
+            ParameterizedTypeReference<ApiResponse<PointDto.V1.PointBalanceResponse>> responseType = new ParameterizedTypeReference<>() {
             };
-            ResponseEntity<ApiResponse<PointDto.V1.BalanceResponse>> response =
+            ResponseEntity<ApiResponse<PointDto.V1.PointBalanceResponse>> response =
                 testRestTemplate.exchange("/api/v1/points", HttpMethod.GET, entity, responseType);
 
             // assert
@@ -108,7 +108,7 @@ public class PointV1ApiE2ETest {
             pointJpaRepository.save(new Point(new UserId(TEST_USER_ID), initialBalance));
 
             // act
-            ResponseEntity<ApiResponse<PointDto.V1.BalanceResponse>> response = chargeBalancePoint(TEST_USER_ID);
+            ResponseEntity<ApiResponse<PointDto.V1.PointBalanceResponse>> response = chargeBalancePoint(TEST_USER_ID);
 
             // assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -124,7 +124,7 @@ public class PointV1ApiE2ETest {
         @DisplayName("존재하지 않는 유저로 요청할 경우, 404 Not Found 응답을 반환한다.")
         void chargePoint_fail_when_user_not_found() {
             // act
-            ResponseEntity<ApiResponse<PointDto.V1.BalanceResponse>> response = chargeBalancePoint(NON_EXISTENT_USER_ID);
+            ResponseEntity<ApiResponse<PointDto.V1.PointBalanceResponse>> response = chargeBalancePoint(NON_EXISTENT_USER_ID);
 
             // assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -134,7 +134,7 @@ public class PointV1ApiE2ETest {
         @DisplayName("충전 금액이 누락되면, 400 Bad Request 응답을 반환한다.")
         void chargePoint_fail_when_balance_is_null() {
             // act
-            ResponseEntity<ApiResponse<PointDto.V1.BalanceResponse>> response = chargeBalancePoint(TEST_USER_ID, null);
+            ResponseEntity<ApiResponse<PointDto.V1.PointBalanceResponse>> response = chargeBalancePoint(TEST_USER_ID, null);
 
             // assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -144,7 +144,8 @@ public class PointV1ApiE2ETest {
         @DisplayName("충전 금액이 최소 금액 미만이면, 400 Bad Request 응답을 반환한다.")
         void chargePoint_fail_when_balance_below_minimum() {
             // act
-            ResponseEntity<ApiResponse<PointDto.V1.BalanceResponse>> response = chargeBalancePoint(TEST_USER_ID, BigDecimal.valueOf(999L));
+            ResponseEntity<ApiResponse<PointDto.V1.PointBalanceResponse>> response = chargeBalancePoint(TEST_USER_ID,
+                BigDecimal.valueOf(999L));
 
             // assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -154,7 +155,8 @@ public class PointV1ApiE2ETest {
         @DisplayName("충전 금액이 최대 금액 초과면, 400 Bad Request 응답을 반환한다.")
         void chargePoint_fail_when_balance_exceeds_maximum() {
             // act
-            ResponseEntity<ApiResponse<PointDto.V1.BalanceResponse>> response = chargeBalancePoint(TEST_USER_ID, BigDecimal.valueOf(1_000_001L));
+            ResponseEntity<ApiResponse<PointDto.V1.PointBalanceResponse>> response = chargeBalancePoint(TEST_USER_ID,
+                BigDecimal.valueOf(1_000_001L));
 
             // assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
@@ -164,43 +166,44 @@ public class PointV1ApiE2ETest {
         @DisplayName("X-USER-ID 헤더가 없으면, 401 Unauthorized 응답을 반환한다.")
         void chargePoint_fail_without_header() {
             // act
-            ResponseEntity<ApiResponse<PointDto.V1.BalanceResponse>> response = chargeBalancePointWithoutHeader(CHARGE_AMOUNT);
+            ResponseEntity<ApiResponse<PointDto.V1.PointBalanceResponse>> response = chargeBalancePointWithoutHeader(CHARGE_AMOUNT);
 
             // assert
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         }
     }
 
-    private ResponseEntity<ApiResponse<PointDto.V1.BalanceResponse>> getPointBalance() {
+    private ResponseEntity<ApiResponse<PointDto.V1.PointBalanceResponse>> getPointBalance() {
         HttpHeaders headers = new HttpHeaders();
         headers.add("X-USER-ID", PointV1ApiE2ETest.TEST_USER_ID);
         HttpEntity<Object> request = new HttpEntity<>(headers);
 
-        ParameterizedTypeReference<ApiResponse<PointDto.V1.BalanceResponse>> responseType = new ParameterizedTypeReference<>() {
+        ParameterizedTypeReference<ApiResponse<PointDto.V1.PointBalanceResponse>> responseType = new ParameterizedTypeReference<>() {
         };
         return testRestTemplate.exchange("/api/v1/points", HttpMethod.GET, request, responseType);
     }
 
-    private ResponseEntity<ApiResponse<PointDto.V1.BalanceResponse>> chargeBalancePoint(String userId) {
+    private ResponseEntity<ApiResponse<PointDto.V1.PointBalanceResponse>> chargeBalancePoint(String userId) {
         return chargeBalancePoint(userId, PointV1ApiE2ETest.CHARGE_AMOUNT);
     }
 
-    private ResponseEntity<ApiResponse<PointDto.V1.BalanceResponse>> chargeBalancePoint(String userId, BigDecimal balance) {
+    private ResponseEntity<ApiResponse<PointDto.V1.PointBalanceResponse>> chargeBalancePoint(String userId,
+        BigDecimal balance) {
         PointDto.V1.ChargePointRequest pointRequest = new PointDto.V1.ChargePointRequest(balance);
         HttpHeaders headers = new HttpHeaders();
         headers.add("X-USER-ID", userId);
         HttpEntity<PointDto.V1.ChargePointRequest> requestEntity = new HttpEntity<>(pointRequest, headers);
 
-        ParameterizedTypeReference<ApiResponse<PointDto.V1.BalanceResponse>> responseType = new ParameterizedTypeReference<>() {
+        ParameterizedTypeReference<ApiResponse<PointDto.V1.PointBalanceResponse>> responseType = new ParameterizedTypeReference<>() {
         };
         return testRestTemplate.exchange("/api/v1/points/charge", HttpMethod.POST, requestEntity, responseType);
     }
 
-    private ResponseEntity<ApiResponse<PointDto.V1.BalanceResponse>> chargeBalancePointWithoutHeader(BigDecimal balance) {
+    private ResponseEntity<ApiResponse<PointDto.V1.PointBalanceResponse>> chargeBalancePointWithoutHeader(BigDecimal balance) {
         PointDto.V1.ChargePointRequest pointRequest = new PointDto.V1.ChargePointRequest(balance);
         HttpEntity<PointDto.V1.ChargePointRequest> requestEntity = new HttpEntity<>(pointRequest);
 
-        ParameterizedTypeReference<ApiResponse<PointDto.V1.BalanceResponse>> responseType = new ParameterizedTypeReference<>() {
+        ParameterizedTypeReference<ApiResponse<PointDto.V1.PointBalanceResponse>> responseType = new ParameterizedTypeReference<>() {
         };
         return testRestTemplate.exchange("/api/v1/points/charge", HttpMethod.POST, requestEntity, responseType);
     }

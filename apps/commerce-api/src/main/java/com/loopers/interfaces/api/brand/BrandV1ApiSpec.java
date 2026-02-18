@@ -12,5 +12,5 @@ public interface BrandV1ApiSpec {
 		summary = "브랜드 상세 조회",
 		description = "브랜드 상세 정보를 조회합니다."
 	)
-	ApiResponse<BrandDto.V1.BrandResponse> getBrandById(final Long brandId);
+	ApiResponse<BrandDto.V1.BrandDetailResponse> getBrandById(final Long brandId);
 }

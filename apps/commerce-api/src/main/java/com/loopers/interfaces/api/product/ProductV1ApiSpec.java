@@ -12,7 +12,7 @@ public interface ProductV1ApiSpec {
 		summary = "상품 목록 조회",
 		description = "조건에 맞는 상품 목록을 조회합니다."
 	)
-	ApiResponse<ProductDto.V1.ProductListResponse> getProductList(final ProductDto.V1.ProductRequest productRequest);
+	ApiResponse<ProductDto.V1.ProductListResponse> getProductList(final ProductDto.V1.ProductListRequest request);
 
 	@Operation(
 		summary = "상품 상세 조회",

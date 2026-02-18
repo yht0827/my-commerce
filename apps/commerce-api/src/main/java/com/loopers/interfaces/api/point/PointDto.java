@@ -25,7 +25,7 @@ public record PointDto() {
 			}
 		}
 
-		public record BalanceResponse(
+		public record PointBalanceResponse(
 			@Schema(description = "포인트 PK", example = "1")
 			Long id,
 			@Schema(description = "회원 아이디", example = "loopers01")
@@ -33,8 +33,8 @@ public record PointDto() {
 			@Schema(description = "현재 포인트 잔액", example = "150000")
 			BigDecimal balance
 		) {
-			public static BalanceResponse from(final PointResult info) {
-				return new BalanceResponse(info.id(), info.userId(), info.balance());
+			public static PointBalanceResponse from(final PointResult info) {
+				return new PointBalanceResponse(info.id(), info.userId(), info.balance());
 			}
 		}
 	}

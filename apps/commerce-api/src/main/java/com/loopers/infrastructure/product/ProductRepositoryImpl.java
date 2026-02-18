@@ -6,7 +6,10 @@ import static com.loopers.domain.product.QProductAggregate.*;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,8 +19,8 @@ import org.springframework.stereotype.Repository;
 
 import com.loopers.domain.brand.BrandId;
 import com.loopers.domain.product.Product;
-import com.loopers.domain.product.ProductInfo;
 import com.loopers.domain.product.ProductId;
+import com.loopers.domain.product.ProductInfo;
 import com.loopers.domain.product.ProductRepository;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
@@ -30,29 +33,17 @@ import lombok.RequiredArgsConstructor;
 @Repository
 @RequiredArgsConstructor
 public class ProductRepositoryImpl implements ProductRepository {
+	private static final String SORT_PROPERTY_PRICE = "price";
+	private static final String SORT_PROPERTY_LIKES_COUNT = "likesCount";
+
 	private final ProductJpaRepository productJpaRepository;
 	private final JPAQueryFactory jpaQueryFactory;
 
 	@Override
 	public Optional<ProductInfo> findById(final ProductId id) {
-
-		ProductInfo productInfo = jpaQueryFactory.select(
-				Projections.constructor(
-					ProductInfo.class,
-					product.id,
-					product.name.name,
-					product.price.price,
-					product.quantity.quantity,
-					brand.brandName.brandName,
-					productAggregate.likeCount.likeCount.coalesce(0L)
-				))
-			.from(product)
-			.leftJoin(brand)
-			.on(product.brandId.brandId.eq(brand.id))
-				.leftJoin(productAggregate)
-				.on(productAggregate.productId.productId.eq(product.id))
-				.where(product.id.eq(id.getProductId()))
-				.fetchOne();
+		ProductInfo productInfo = createProductInfoQuery()
+			.where(product.id.eq(id.getProductId()))
+			.fetchOne();
 
 		return Optional.ofNullable(productInfo);
 	}
@@ -114,7 +105,8 @@ public class ProductRepositoryImpl implements ProductRepository {
 		}
 
 		boolean requiresLikeJoin = pageable.getSort().stream()
-			.anyMatch(o -> o.getProperty().equals("likesCount"));
+			.map(Sort.Order::getProperty)
+			.anyMatch(SORT_PROPERTY_LIKES_COUNT::equals);
 		if (requiresLikeJoin) {
 			idQuery.leftJoin(productAggregate)
 				.on(productAggregate.productId.productId.eq(product.id));
@@ -135,9 +127,22 @@ public class ProductRepositoryImpl implements ProductRepository {
 		return countQuery;
 	}
 
-	private List<ProductInfo> getProductInfosByIds(List<Long> productIds) {
-		// ID 순서를 보장하기 위한 Map 생성
-		List<ProductInfo> allProductInfos = jpaQueryFactory.select(
+	private List<ProductInfo> getProductInfosByIds(final List<Long> productIds) {
+		List<ProductInfo> allProductInfos = createProductInfoQuery()
+			.where(product.id.in(productIds))
+			.fetch();
+
+		Map<Long, ProductInfo> productInfoById = allProductInfos.stream()
+			.collect(Collectors.toMap(ProductInfo::productId, productInfo -> productInfo, (first, ignored) -> first));
+
+		return productIds.stream()
+			.map(productInfoById::get)
+			.filter(Objects::nonNull)
+			.toList();
+	}
+
+	private JPAQuery<ProductInfo> createProductInfoQuery() {
+		return jpaQueryFactory.select(
 				Projections.constructor(
 					ProductInfo.class,
 					product.id,
@@ -150,30 +155,19 @@ public class ProductRepositoryImpl implements ProductRepository {
 			)
 			.from(product)
 			.leftJoin(brand).on(product.brandId.brandId.eq(brand.id))
-			.leftJoin(productAggregate).on(productAggregate.productId.productId.eq(product.id))
-			.where(product.id.in(productIds))
-			.fetch();
-
-		// ID 순서에 맞게 정렬하여 반환
-		return productIds.stream()
-			.map(id -> allProductInfos.stream()
-				.filter(info -> info.productId().equals(id))
-				.findFirst()
-				.orElse(null))
-			.filter(java.util.Objects::nonNull)
-			.toList();
+			.leftJoin(productAggregate).on(productAggregate.productId.productId.eq(product.id));
 	}
 
-	private void applyOrderByForIdQuery(JPAQuery<Long> query, Pageable pageable) {
+	private void applyOrderByForIdQuery(final JPAQuery<Long> query, final Pageable pageable) {
 		pageable.getSort().stream().map(this::createOrderSpecifierForIdQuery).forEach(query::orderBy);
 	}
 
-	private OrderSpecifier<?> createOrderSpecifierForIdQuery(Sort.Order order) {
+	private OrderSpecifier<?> createOrderSpecifierForIdQuery(final Sort.Order order) {
 		Order direction = order.isAscending() ? Order.ASC : Order.DESC;
 
 		return switch (order.getProperty()) {
-			case "price" -> new OrderSpecifier<>(direction, product.price.price);
-			case "likesCount" -> new OrderSpecifier<>(direction, productAggregate.likeCount.likeCount);
+			case SORT_PROPERTY_PRICE -> new OrderSpecifier<>(direction, product.price.price);
+			case SORT_PROPERTY_LIKES_COUNT -> new OrderSpecifier<>(direction, productAggregate.likeCount.likeCount);
 			default -> new OrderSpecifier<>(direction, product.createdAt);
 		};
 	}

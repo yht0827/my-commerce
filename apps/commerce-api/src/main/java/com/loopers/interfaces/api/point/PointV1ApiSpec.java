@@ -12,11 +12,12 @@ public interface PointV1ApiSpec {
 		summary = "포인트 충전",
 		description = "사용자의 포인트를 충전합니다."
 	)
-	ApiResponse<PointDto.V1.BalanceResponse> chargePoint(final String userId, final PointDto.V1.ChargePointRequest pointRequest);
+	ApiResponse<PointDto.V1.PointBalanceResponse> chargePoint(final String userId,
+		final PointDto.V1.ChargePointRequest pointRequest);
 
 	@Operation(
 		summary = "포인트 조회",
 		description = "사용자의 포인트를 조회합니다."
 	)
-	ApiResponse<PointDto.V1.BalanceResponse> getPoint(final String userId);
+	ApiResponse<PointDto.V1.PointBalanceResponse> getPoint(final String userId);
 }

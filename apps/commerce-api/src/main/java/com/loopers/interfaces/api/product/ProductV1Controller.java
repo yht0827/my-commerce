@@ -23,8 +23,8 @@ public class ProductV1Controller implements ProductV1ApiSpec {
 
 	@GetMapping
 	@Override
-	public ApiResponse<ProductDto.V1.ProductListResponse> getProductList(ProductDto.V1.ProductRequest productRequest) {
-		GetProductListQuery query = productRequest.toQuery();
+	public ApiResponse<ProductDto.V1.ProductListResponse> getProductList(ProductDto.V1.ProductListRequest request) {
+		GetProductListQuery query = request.toQuery();
 		ProductListResult products = productApplicationService.getProductList(query);
 		ProductDto.V1.ProductListResponse response = ProductDto.V1.ProductListResponse.from(products);
 		return ApiResponse.success(response);

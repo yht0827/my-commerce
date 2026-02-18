@@ -3,14 +3,14 @@ package com.loopers.application.product;
 import org.springframework.data.domain.Pageable;
 
 import com.loopers.domain.brand.BrandId;
-import com.loopers.domain.product.ProductCommand;
+import com.loopers.domain.product.ProductData;
 
 public record GetProductListQuery(
 	Long brandId,
 	Pageable pageable
 ) {
-	public ProductCommand.GetProductList toCommand() {
+	public ProductData.GetProductList toData() {
 		BrandId resolvedBrandId = brandId == null ? null : BrandId.of(brandId);
-		return new ProductCommand.GetProductList(resolvedBrandId, pageable);
+		return new ProductData.GetProductList(resolvedBrandId, pageable);
 	}
 }

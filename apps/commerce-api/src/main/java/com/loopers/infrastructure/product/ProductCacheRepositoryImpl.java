@@ -11,10 +11,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Repository;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.domain.brand.BrandId;
 import com.loopers.domain.product.ProductCacheRepository;
-import com.loopers.domain.product.ProductInfo;
 import com.loopers.domain.product.ProductId;
+import com.loopers.domain.product.ProductInfo;
 import com.loopers.support.cache.CacheablePage;
 
 import lombok.RequiredArgsConstructor;
@@ -27,15 +29,20 @@ public class ProductCacheRepositoryImpl implements ProductCacheRepository {
 	private static final Duration PRODUCT_DETAIL_TTL = Duration.ofMinutes(60);
 	private static final String CACHE_KEY_PREFIX_PRODUCT_LIST = "productList";
 	private static final String CACHE_KEY_PREFIX_PRODUCT_DETAIL = "productDetail";
+	private static final TypeReference<CacheablePage<ProductInfo>> PRODUCT_INFO_PAGE_TYPE = new TypeReference<>() {
+	};
 
 	private final RedisTemplate<String, Object> redisTemplate;
+	private final ObjectMapper objectMapper;
 
 	@Override
-	@SuppressWarnings("unchecked")
 	public Optional<CacheablePage<ProductInfo>> findProductList(final BrandId brandId, final Pageable pageable) {
 		String cacheKey = productListCacheKey(brandId, pageable);
-		CacheablePage<ProductInfo> cached = (CacheablePage<ProductInfo>)redisTemplate.opsForValue().get(cacheKey);
-		return Optional.ofNullable(cached);
+		Object cached = redisTemplate.opsForValue().get(cacheKey);
+		if (cached == null) {
+			return Optional.empty();
+		}
+		return Optional.of(objectMapper.convertValue(cached, PRODUCT_INFO_PAGE_TYPE));
 	}
 
 	@Override
@@ -47,8 +54,11 @@ public class ProductCacheRepositoryImpl implements ProductCacheRepository {
 	@Override
 	public Optional<ProductInfo> findProductDetail(final ProductId productId) {
 		String cacheKey = productDetailCacheKey(productId);
-		ProductInfo cached = (ProductInfo)redisTemplate.opsForValue().get(cacheKey);
-		return Optional.ofNullable(cached);
+		Object cached = redisTemplate.opsForValue().get(cacheKey);
+		if (cached instanceof ProductInfo productInfo) {
+			return Optional.of(productInfo);
+		}
+		return Optional.empty();
 	}
 
 	@Override

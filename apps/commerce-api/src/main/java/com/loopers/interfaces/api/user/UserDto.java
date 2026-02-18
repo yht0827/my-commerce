@@ -11,7 +11,7 @@ import jakarta.validation.constraints.Pattern;
 public record UserDto() {
 
 	public record V1() {
-		public record UserRequest(
+		public record CreateUserRequest(
 			@Schema(description = "회원 아이디", example = "loopers01")
 			@NotBlank(message = "userId는 필수입니다.")
 			@Pattern(regexp = "^[a-zA-Z0-9]{4,20}$", message = "userId는 영문/숫자 4~20자여야 합니다.")

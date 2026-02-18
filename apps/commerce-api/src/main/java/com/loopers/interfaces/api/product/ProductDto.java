@@ -18,7 +18,7 @@ public record ProductDto() {
 
 	public record V1() {
 
-		public record ProductRequest(
+		public record ProductListRequest(
 			@Schema(description = "페이지 번호(0부터 시작)", example = "0")
 			@PositiveOrZero Integer page,
 			@Schema(description = "페이지 크기", example = "20")

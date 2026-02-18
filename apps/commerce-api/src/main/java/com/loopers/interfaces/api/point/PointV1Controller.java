@@ -25,22 +25,22 @@ public class PointV1Controller implements PointV1ApiSpec {
 
 	@PostMapping("/charge")
 	@Override
-	public ApiResponse<PointDto.V1.BalanceResponse> chargePoint(
+	public ApiResponse<PointDto.V1.PointBalanceResponse> chargePoint(
 		@CurrentUserId final String userId,
 		@Valid @RequestBody final PointDto.V1.ChargePointRequest request
 	) {
 		ChargePointCommand command = request.toCommand(userId);
 		PointResult pointResult = pointApplicationService.chargePoint(command);
-		PointDto.V1.BalanceResponse response = PointDto.V1.BalanceResponse.from(pointResult);
+		PointDto.V1.PointBalanceResponse response = PointDto.V1.PointBalanceResponse.from(pointResult);
 		return ApiResponse.success(response);
 	}
 
 	@GetMapping
 	@Override
-	public ApiResponse<PointDto.V1.BalanceResponse> getPoint(@CurrentUserId final String userId) {
+	public ApiResponse<PointDto.V1.PointBalanceResponse> getPoint(@CurrentUserId final String userId) {
 		GetPointQuery query = GetPointQuery.of(userId);
 		PointResult pointResult = pointApplicationService.getPoint(query);
-		PointDto.V1.BalanceResponse response = PointDto.V1.BalanceResponse.from(pointResult);
+		PointDto.V1.PointBalanceResponse response = PointDto.V1.PointBalanceResponse.from(pointResult);
 		return ApiResponse.success(response);
 	}
 }

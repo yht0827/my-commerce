@@ -28,7 +28,7 @@ public class UserV1Controller implements UserV1ApiSpec {
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	@Override
-	public ApiResponse<UserDto.V1.UserResponse> createUser(@Valid @RequestBody final UserDto.V1.UserRequest request) {
+	public ApiResponse<UserDto.V1.UserResponse> createUser(@Valid @RequestBody final UserDto.V1.CreateUserRequest request) {
 		CreateUserCommand command = request.toCommand();
 		UserResult userInfo = userApplicationService.register(command);
 		UserDto.V1.UserResponse response = UserDto.V1.UserResponse.from(userInfo);

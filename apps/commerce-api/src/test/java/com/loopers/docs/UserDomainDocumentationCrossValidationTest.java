@@ -40,7 +40,7 @@ class UserDomainDocumentationCrossValidationTest {
 		RequestMapping classMapping = UserV1Controller.class.getAnnotation(RequestMapping.class);
 		String basePath = classMapping.value()[0];
 
-		Method createMethod = UserV1Controller.class.getMethod("createUser", UserDto.V1.UserRequest.class);
+		Method createMethod = UserV1Controller.class.getMethod("createUser", UserDto.V1.CreateUserRequest.class);
 		PostMapping postMapping = createMethod.getAnnotation(PostMapping.class);
 		String createUserPath = resolvePath(basePath, postMapping.value(), postMapping.path());
 
