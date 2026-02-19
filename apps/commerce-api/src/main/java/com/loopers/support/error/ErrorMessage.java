@@ -27,6 +27,8 @@ public enum ErrorMessage {
 	PRODUCT_NAME_REQUIRED("상품 이름은 비어있을 수 없습니다."),
 	PRODUCT_LIKE_COUNT_INVALID("좋아요 수는 0 이상이어야 합니다."),
 	PRODUCT_NOT_ORDERABLE("판매 중인 상품만 주문할 수 있습니다."),
+	LIKE_ALREADY_EXISTS("이미 좋아요를 누른 상품입니다."),
+	LIKE_NOT_FOUND("좋아요 정보를 찾을 수 없습니다."),
 	COUPON_NAME_REQUIRED("쿠폰 이름은 비어있을 수 없습니다."),
 	COUPON_DISCOUNT_VALUE_REQUIRED("할인 값이 설정되지 않았습니다."),
 	COUPON_DISCOUNT_VALUE_INVALID("할인 금액은 0 이상이어야 합니다."),

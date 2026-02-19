@@ -79,6 +79,21 @@ CREATE TABLE IF NOT EXISTS products
 ) DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci;
 
+CREATE TABLE IF NOT EXISTS product_aggregate
+(
+    id         BIGINT      NOT NULL AUTO_INCREMENT,
+    product_id BIGINT      NOT NULL,
+    like_count BIGINT      NOT NULL DEFAULT 0,
+    created_at DATETIME(6) NOT NULL,
+    updated_at DATETIME(6) NOT NULL,
+    deleted_at DATETIME(6) NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_product_aggregate_product_id UNIQUE (product_id),
+    CONSTRAINT chk_product_aggregate_like_count_non_negative CHECK (like_count >= 0),
+    CONSTRAINT fk_product_aggregate_product_id FOREIGN KEY (product_id) REFERENCES products (id)
+) DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci;
+
 CREATE TABLE IF NOT EXISTS likes
 (
     id         BIGINT      NOT NULL AUTO_INCREMENT,
