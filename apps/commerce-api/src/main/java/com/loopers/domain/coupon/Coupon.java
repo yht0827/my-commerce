@@ -1,5 +1,8 @@
 package com.loopers.domain.coupon;
 
+import static com.loopers.support.error.ErrorMessage.*;
+import static com.loopers.support.error.ErrorType.*;
+
 import com.loopers.domain.BaseEntity;
 import com.loopers.domain.brand.BrandId;
 import com.loopers.domain.order.CouponDiscountAmount;
@@ -7,7 +10,6 @@ import com.loopers.domain.order.TotalOrderPrice;
 import com.loopers.domain.product.ProductId;
 import com.loopers.domain.user.UserId;
 import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
 
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -82,7 +84,7 @@ public class Coupon extends BaseEntity {
 
 	public CouponDiscountAmount applyDiscount(TotalOrderPrice totalOrderPrice) {
 		if (couponStatus == CouponStatus.USED) {
-			throw new CoreException(ErrorType.BAD_REQUEST, "이미 사용된 쿠폰입니다.");
+			throw new CoreException(BAD_REQUEST, COUPON_ALREADY_USED.format());
 		}
 		Long discountAmount = calculateDiscount(totalOrderPrice.getTotalPrice());
 		markAsUsed();

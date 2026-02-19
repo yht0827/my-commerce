@@ -87,7 +87,7 @@ erDiagram
         bigint brand_id FK "브랜드 ID"
         varchar name "상품명"
         text description "상품 설명"
-        bigint price "가격"
+        bigint price "가격(KRW, 원 단위 정수)"
         varchar status "상태 (ON_SALE/SOLD_OUT/DISCONTINUED)"
         bigint like_count "좋아요 수"
         datetime created_at "생성일시"
@@ -114,7 +114,7 @@ erDiagram
         bigint product_id FK "상품 ID"
         bigint brand_id FK "브랜드 ID"
         varchar coupon_name "쿠폰명"
-        bigint discount_value "할인 값"
+        bigint discount_value "할인 값(FIXED: KRW, PERCENTAGE: 정수 비율 0~100)"
         bigint max_discount_amount "최대 할인 금액"
         varchar coupon_type "쿠폰 타입 (FIXED_AMOUNT/PERCENTAGE)"
         datetime issued_at "발급일시"
@@ -150,7 +150,7 @@ erDiagram
     payment {
         bigint id PK
         bigint order_id FK,UK "주문 ID"
-        bigint amount "결제 금액"
+        bigint amount "결제 금액(KRW, 원 단위 정수)"
         varchar method "결제 수단 (POINT)"
         varchar status "상태 (PENDING/COMPLETED/FAILED/REFUNDED)"
         datetime paid_at "결제일시"
@@ -252,7 +252,7 @@ erDiagram
 | brand_id | BIGINT | FK, NOT NULL | 브랜드 ID |
 | name | VARCHAR(200) | NOT NULL | 상품명 |
 | description | TEXT | | 상품 설명 |
-| price | BIGINT | NOT NULL | 가격 |
+| price | BIGINT | NOT NULL | 가격(KRW, 원 단위 정수) |
 | status | VARCHAR(20) | NOT NULL, DEFAULT 'ON_SALE' | 상태 |
 | like_count | BIGINT | NOT NULL, DEFAULT 0 | 좋아요 수 |
 | created_at | DATETIME | NOT NULL | 생성일시 |
@@ -324,7 +324,7 @@ erDiagram
 | product_id | BIGINT | FK, NOT NULL | 대상 상품 ID |
 | brand_id | BIGINT | FK, NOT NULL | 대상 브랜드 ID |
 | coupon_name | VARCHAR(255) | NOT NULL | 쿠폰명 |
-| discount_value | BIGINT | NOT NULL | 할인 값 |
+| discount_value | BIGINT | NOT NULL | 할인 값(FIXED_AMOUNT는 KRW 정액, PERCENTAGE는 정수 비율 0~100) |
 | max_discount_amount | BIGINT | NOT NULL | 최대 할인 금액 |
 | coupon_type | VARCHAR(20) | NOT NULL | 쿠폰 타입 (FIXED_AMOUNT/PERCENTAGE) |
 | issued_at | DATETIME(6) | NOT NULL | 발급일시 |
@@ -335,6 +335,10 @@ erDiagram
 | created_at | DATETIME(6) | NOT NULL | 생성일시 |
 | updated_at | DATETIME(6) | NOT NULL | 수정일시 |
 | deleted_at | DATETIME(6) | NULL | 삭제일시(소프트 삭제) |
+
+**할인 계산 규칙**
+- `coupon_type = PERCENTAGE` 인 경우 할인 금액은 `orderAmount * discount_value / 100`으로 계산하며 소수점 이하는 버림 처리한다.
+- `coupon_type = PERCENTAGE` 인 경우 `discount_value`는 `0~100` 범위만 허용한다.
 
 **인덱스**
 - `idx_coupons_user_id`: user_id
@@ -405,7 +409,7 @@ erDiagram
 |--------|------|----------|------|
 | id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
 | order_id | BIGINT | FK, UK, NOT NULL | 주문 ID |
-| amount | BIGINT | NOT NULL | 결제 금액 |
+| amount | BIGINT | NOT NULL | 결제 금액(KRW, 원 단위 정수) |
 | method | VARCHAR(20) | NOT NULL | 결제 수단 (POINT) |
 | status | VARCHAR(20) | NOT NULL, DEFAULT 'PENDING' | 상태 |
 | paid_at | DATETIME | | 결제일시 |

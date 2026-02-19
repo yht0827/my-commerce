@@ -1,7 +1,9 @@
 package com.loopers.domain.brand;
 
+import static com.loopers.support.error.ErrorMessage.*;
+import static com.loopers.support.error.ErrorType.*;
+
 import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -21,7 +23,7 @@ public class BrandName implements Serializable {
 	
 	public BrandName(String brandName) {
 		if (brandName == null || brandName.isBlank()) {
-			throw new CoreException(ErrorType.BAD_REQUEST, "브랜드 이름은 비어있을 수 없습니다.");
+			throw new CoreException(BAD_REQUEST, BRAND_NAME_REQUIRED.format());
 		}
 		this.brandName = brandName;
 	}

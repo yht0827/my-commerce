@@ -1,9 +1,11 @@
 package com.loopers.domain.brand;
 
+import static com.loopers.support.error.ErrorMessage.*;
+import static com.loopers.support.error.ErrorType.*;
+
 import java.io.Serializable;
 
 import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -21,7 +23,7 @@ public class BrandId implements Serializable {
 	
 	public BrandId(Long brandId) {
 		if (brandId == null || brandId <= 0) {
-			throw new CoreException(ErrorType.BAD_REQUEST, "브랜드 ID는 비어있을 수 없습니다.");
+			throw new CoreException(BAD_REQUEST, BRAND_ID_INVALID.format());
 		}
 		this.brandId = brandId;
 	}

@@ -1,9 +1,11 @@
 package com.loopers.domain.product;
 
+import static com.loopers.support.error.ErrorMessage.*;
+import static com.loopers.support.error.ErrorType.*;
+
 import java.io.Serializable;
 
 import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -21,7 +23,7 @@ public class LikeCount implements Serializable {
 
 	public LikeCount(Long likeCount) {
 		if (likeCount == null || likeCount < 0) {
-			throw new CoreException(ErrorType.BAD_REQUEST, "좋아요 수는 0 이상이어야 합니다.");
+			throw new CoreException(BAD_REQUEST, PRODUCT_LIKE_COUNT_INVALID.format());
 		}
 		this.likeCount = likeCount;
 	}

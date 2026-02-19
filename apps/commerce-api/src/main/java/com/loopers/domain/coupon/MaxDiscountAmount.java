@@ -1,9 +1,11 @@
 package com.loopers.domain.coupon;
 
+import static com.loopers.support.error.ErrorMessage.*;
+import static com.loopers.support.error.ErrorType.*;
+
 import java.io.Serializable;
 
 import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -21,7 +23,7 @@ public class MaxDiscountAmount implements Serializable {
 
 	public MaxDiscountAmount(final Long maxDiscountAmount) {
 		if (maxDiscountAmount == null || maxDiscountAmount < 0) {
-			throw new CoreException(ErrorType.BAD_REQUEST, "최대 할인 금액은 0 이상이어야 합니다.");
+			throw new CoreException(BAD_REQUEST, COUPON_MAX_DISCOUNT_AMOUNT_INVALID.format());
 		}
 		this.maxDiscountAmount = maxDiscountAmount;
 	}

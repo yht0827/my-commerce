@@ -2,31 +2,28 @@ package com.loopers.domain.brand;
 
 import org.springframework.stereotype.Component;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
+import com.loopers.support.metrics.CacheMetricsCore;
 
 @Component
 public class BrandCacheMetrics {
 
-	private final Counter cacheHitCounter;
-	private final Counter cacheMissCounter;
-	private final Counter dbLoadCounter;
+	private static final String METRIC_DOMAIN = "brand";
 
-	public BrandCacheMetrics(final MeterRegistry meterRegistry) {
-		this.cacheHitCounter = meterRegistry.counter("commerce.brand.cache.hit");
-		this.cacheMissCounter = meterRegistry.counter("commerce.brand.cache.miss");
-		this.dbLoadCounter = meterRegistry.counter("commerce.brand.cache.db.load");
+	private final CacheMetricsCore cacheMetricsCore;
+
+	public BrandCacheMetrics(final CacheMetricsCore cacheMetricsCore) {
+		this.cacheMetricsCore = cacheMetricsCore;
 	}
 
 	public void recordCacheHit() {
-		cacheHitCounter.increment();
+		cacheMetricsCore.recordCacheHit(METRIC_DOMAIN);
 	}
 
 	public void recordCacheMiss() {
-		cacheMissCounter.increment();
+		cacheMetricsCore.recordCacheMiss(METRIC_DOMAIN);
 	}
 
 	public void recordDbLoad() {
-		dbLoadCounter.increment();
+		cacheMetricsCore.recordDbLoad(METRIC_DOMAIN);
 	}
 }
