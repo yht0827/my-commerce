@@ -60,7 +60,17 @@ public class ProductRepositoryImpl implements ProductRepository {
 
 	@Override
 	public Page<ProductInfo> getProductList(final BrandId brandId, final Pageable pageable) {
-		return getProductListWithCoveringIndex(brandId, pageable);
+		JPAQuery<ProductInfo> productInfoQuery = applyBrandFilter(createProductInfoQuery(), brandId);
+
+		applyOrderBy(productInfoQuery, pageable);
+
+		List<ProductInfo> productInfos = productInfoQuery
+			.offset(pageable.getOffset())
+			.limit(pageable.getPageSize())
+			.fetch();
+
+		JPAQuery<Long> countQuery = createCountQuery(brandId);
+		return PageableExecutionUtils.getPage(productInfos, pageable, countQuery::fetchOne);
 	}
 
 	@Override
@@ -79,52 +89,9 @@ public class ProductRepositoryImpl implements ProductRepository {
 		return getProductInfosByIds(productIds);
 	}
 
-	// 커버링 인덱스를 사용한 최적화된 상품 목록 조회
-	private Page<ProductInfo> getProductListWithCoveringIndex(final BrandId brandId, final Pageable pageable) {
-		// 커버링 인덱스로 ID만 조회
-		List<Long> productIds = getProductIdsWithCoveringIndex(brandId, pageable);
-
-		// 카운트 쿼리
-		JPAQuery<Long> countQuery = createCountQuery(brandId);
-
-		if (productIds.isEmpty()) {
-			return PageableExecutionUtils.getPage(List.of(), pageable, countQuery::fetchOne);
-		}
-
-		// ProductInfo로 JOIN 조회 (정렬 순서 보장)
-		List<ProductInfo> productInfos = getProductInfosByIds(productIds);
-
-		return PageableExecutionUtils.getPage(productInfos, pageable, countQuery::fetchOne);
-	}
-
-	private List<Long> getProductIdsWithCoveringIndex(final BrandId brandId, final Pageable pageable) {
-		JPAQuery<Long> idQuery = jpaQueryFactory.select(product.id).from(product);
-
-		if (brandId != null) {
-			idQuery.where(product.brandId.eq(brandId));
-		}
-
-		boolean requiresLikeJoin = pageable.getSort().stream()
-			.map(Sort.Order::getProperty)
-			.anyMatch(SORT_PROPERTY_LIKES_COUNT::equals);
-		if (requiresLikeJoin) {
-			idQuery.leftJoin(productAggregate)
-				.on(productAggregate.productId.productId.eq(product.id));
-		}
-
-		applyOrderByForIdQuery(idQuery, pageable);
-
-		return idQuery.offset(pageable.getOffset()).limit(pageable.getPageSize()).fetch();
-	}
-
 	private JPAQuery<Long> createCountQuery(final BrandId brandId) {
 		JPAQuery<Long> countQuery = jpaQueryFactory.select(product.count()).from(product);
-
-		if (brandId != null) {
-			countQuery.where(product.brandId.eq(brandId));
-		}
-
-		return countQuery;
+		return applyBrandFilter(countQuery, brandId);
 	}
 
 	private List<ProductInfo> getProductInfosByIds(final List<Long> productIds) {
@@ -158,11 +125,23 @@ public class ProductRepositoryImpl implements ProductRepository {
 			.leftJoin(productAggregate).on(productAggregate.productId.productId.eq(product.id));
 	}
 
-	private void applyOrderByForIdQuery(final JPAQuery<Long> query, final Pageable pageable) {
-		pageable.getSort().stream().map(this::createOrderSpecifierForIdQuery).forEach(query::orderBy);
+	private <T extends JPAQuery<?>> T applyBrandFilter(final T query, final BrandId brandId) {
+		if (brandId != null) {
+			query.where(product.brandId.eq(brandId));
+		}
+		return query;
 	}
 
-	private OrderSpecifier<?> createOrderSpecifierForIdQuery(final Sort.Order order) {
+	private void applyOrderBy(final JPAQuery<?> query, final Pageable pageable) {
+		if (pageable.getSort().isUnsorted()) {
+			query.orderBy(product.createdAt.desc());
+			return;
+		}
+
+		pageable.getSort().stream().map(this::createOrderSpecifier).forEach(query::orderBy);
+	}
+
+	private OrderSpecifier<?> createOrderSpecifier(final Sort.Order order) {
 		Order direction = order.isAscending() ? Order.ASC : Order.DESC;
 
 		return switch (order.getProperty()) {

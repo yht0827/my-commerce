@@ -5,9 +5,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import com.loopers.domain.common.Quantity;
+import com.loopers.domain.product.ProductCacheInvalidationService;
 import com.loopers.domain.product.ProductId;
-import com.loopers.domain.product.ProductService;
-import com.loopers.domain.product.event.ProductOutOfStockEvent;
+import com.loopers.domain.product.event.ProductQuantityChangedEvent;
+import com.loopers.domain.stock.StockService;
 import com.loopers.support.event.Envelope;
 
 import lombok.RequiredArgsConstructor;
@@ -18,19 +20,34 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ProductEventHandler {
 
-	private final ProductService productService;
+	private final ProductCacheInvalidationService productCacheInvalidationService;
+	private final StockService stockService;
 
 	@Async
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-	public void handleOutOfStock(Envelope<ProductOutOfStockEvent> event) {
-		if (!ProductOutOfStockEvent.EVENT_TYPE.equals(event.getEventType())) {
+	public void handleQuantityChanged(Envelope<ProductQuantityChangedEvent> event) {
+		if (!ProductQuantityChangedEvent.EVENT_TYPE.equals(event.getEventType())) {
 			return;
 		}
-		ProductOutOfStockEvent stockDepletedEvent = event.getPayload();
+
+		ProductQuantityChangedEvent productQuantityChangedEvent = event.getPayload();
+
 		try {
-			productService.evictProductRelatedCaches(ProductId.of(stockDepletedEvent.productId()));
+			ProductId productId = ProductId.of(productQuantityChangedEvent.productId());
+
+			stockService.syncFromProductQuantity(
+				productId,
+				new Quantity(productQuantityChangedEvent.currentQuantity())
+			);
+			productCacheInvalidationService.evictProductRelatedCaches(productId);
 		} catch (Exception e) {
-			log.error("품절 이벤트 처리 실패: productId={}", stockDepletedEvent.productId(), e);
+			log.error(
+				"상품 수량 변경 이벤트 처리 실패: productId={}, previousQuantity={}, currentQuantity={}",
+				productQuantityChangedEvent.productId(),
+				productQuantityChangedEvent.previousQuantity(),
+				productQuantityChangedEvent.currentQuantity(),
+				e
+			);
 		}
 	}
 }

@@ -1,11 +1,13 @@
 package com.loopers.domain.product;
 
+import static com.loopers.support.error.ErrorMessage.*;
+import static com.loopers.support.error.ErrorType.*;
+
 import com.loopers.domain.BaseEntity;
 import com.loopers.domain.brand.BrandId;
 import com.loopers.domain.common.Price;
 import com.loopers.domain.common.Quantity;
 import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
@@ -60,7 +62,7 @@ public class Product extends BaseEntity {
 
 	public void deduct(final Quantity amount) {
 		if (!status.isOrderable()) {
-			throw new CoreException(ErrorType.BAD_REQUEST, "판매 중인 상품만 주문할 수 있습니다.");
+			throw new CoreException(BAD_REQUEST, PRODUCT_NOT_ORDERABLE.format());
 		}
 		this.quantity = this.quantity.subtractWithValidation(amount);
 		if (this.quantity.isOutOfStock()) {

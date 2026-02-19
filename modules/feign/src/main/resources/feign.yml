@@ -8,6 +8,9 @@ feign:
       pgClient:
         connectTimeout: 5000
         readTimeout: 6000
+      dataPlatformClient:
+        connectTimeout: 3000
+        readTimeout: 5000
   compression:
     request:
       enabled: true # 요청 압축

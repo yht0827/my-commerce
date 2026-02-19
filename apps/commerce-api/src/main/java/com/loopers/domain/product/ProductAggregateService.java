@@ -21,16 +21,7 @@ public class ProductAggregateService {
 	}
 
 	public void createIfNotExists(final ProductId productId) {
-		// UPSERT 패턴 또는 존재 여부 체크 후 생성
-		if (!productAggregateRepository.existsByProductId(productId)) {
-			ProductAggregate productAggregate = ProductAggregate.builder()
-				.productId(productId)
-				.likeCount(LikeCount.Zero())
-				.build();
-
-			productAggregateRepository.save(productAggregate);
-		}
-
+		productAggregateRepository.createIfNotExists(productId);
 	}
 
 }

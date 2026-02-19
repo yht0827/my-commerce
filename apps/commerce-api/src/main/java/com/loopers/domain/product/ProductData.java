@@ -8,4 +8,7 @@ public record ProductData() {
 
 	public record GetProductList(BrandId brandId, Pageable pageable) {
 	}
+
+	public record StockQuantityChanged(Long productId, Long previousQuantity, Long currentQuantity) {
+	}
 }

@@ -2,15 +2,21 @@ package com.loopers.domain.product.event;
 
 import java.time.LocalDateTime;
 
-public record ProductOutOfStockEvent(
+public record ProductQuantityChangedEvent(
 	Long productId,
+	Long previousQuantity,
+	Long currentQuantity,
 	LocalDateTime occurredAt
 ) implements ProductEvent {
 
-	public static final String EVENT_TYPE = "PRODUCT_OUT_OF_STOCK";
+	public static final String EVENT_TYPE = "PRODUCT_QUANTITY_CHANGED";
 
-	public static ProductOutOfStockEvent create(Long productId) {
-		return new ProductOutOfStockEvent(productId, LocalDateTime.now());
+	public static ProductQuantityChangedEvent create(
+		final Long productId,
+		final Long previousQuantity,
+		final Long currentQuantity
+	) {
+		return new ProductQuantityChangedEvent(productId, previousQuantity, currentQuantity, LocalDateTime.now());
 	}
 
 	@Override

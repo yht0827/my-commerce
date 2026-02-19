@@ -9,7 +9,6 @@ import com.loopers.domain.order.event.OrderCreatedEvent;
 import com.loopers.domain.payment.event.PaymentCompletedEvent;
 import com.loopers.domain.payment.event.PaymentFailedEvent;
 import com.loopers.domain.platform.event.DataPlatformEvent;
-import com.loopers.infrastructure.payment.PaymentEventPublisher;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import com.loopers.support.event.Envelope;
@@ -25,7 +24,6 @@ public class PaymentEventHandler {
 
 	private final PaymentProcessor paymentProcessor;
 	private final EventPublisher eventPublisher;
-	private final PaymentEventPublisher paymentEventPublisher;
 
 	@Async
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -52,7 +50,6 @@ public class PaymentEventHandler {
 		PaymentCompletedEvent completedEvent = PaymentCompletedEvent.create(success.paymentInfo().orderId(),
 			success.paymentInfo().transactionKey());
 		eventPublisher.publish(completedEvent);
-		paymentEventPublisher.publishSuccess(completedEvent.orderId(), success.amount());
 		log.info("결제 처리 성공 - 주문ID: {}, 결제ID: {}", success.paymentInfo().orderId(), success.paymentInfo().transactionKey());
 
 		DataPlatformEvent dataPlatformEvent = DataPlatformEvent.create(completedEvent.getEventType(), completedEvent.orderId());
@@ -64,7 +61,6 @@ public class PaymentEventHandler {
 		PaymentFailedEvent failedEvent = PaymentFailedEvent.create(failure.orderEvent().orderId(), failure.orderEvent().userId(),
 			"FAILED_" + failure.orderEvent().orderId(), failure.orderEvent().totalAmount(), failure.exception());
 		eventPublisher.publish(failedEvent);
-		paymentEventPublisher.publishFail(failedEvent.orderId(), failure.amount(), failure.reason());
 		log.error("결제 처리 실패 - 주문ID: {}", failure.orderEvent().orderId(), failure.exception());
 
 		DataPlatformEvent dataPlatformEvent = DataPlatformEvent.create(failedEvent.getEventType(), failedEvent.orderId());

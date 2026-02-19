@@ -11,7 +11,8 @@ import com.loopers.domain.order.OrderInfo;
 import com.loopers.domain.order.OrderItem;
 import com.loopers.domain.order.OrderService;
 import com.loopers.domain.order.TotalOrderPrice;
-import com.loopers.domain.product.ProductService;
+import com.loopers.domain.product.ProductData;
+import com.loopers.domain.product.ProductStockService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -20,21 +21,22 @@ import lombok.RequiredArgsConstructor;
 public class OrderProcessor {
 
 	private final OrderService orderService;
-	private final ProductService productService;
+	private final ProductStockService productStockService;
 	private final CouponService couponService;
 
-	public OrderInfo process(OrderCommand.CreateOrder command) {
+	public OrderProcessResult process(final OrderCommand.CreateOrder command) {
 		OrderData.CreateOrder data = command.toData();
 
 		List<OrderItem> items = data.items();
 
-		productService.deductStock(items);
+		List<ProductData.StockQuantityChanged> quantityChanges = productStockService.deductStock(items);
 
 		TotalOrderPrice totalOrderPrice = orderService.calculateTotalOrderPrice(items);
 
 		CouponDiscountAmount couponDiscountAmount = couponService.applyDiscount(data.couponId(), totalOrderPrice);
+		OrderInfo orderInfo = orderService.createOrder(data, items, totalOrderPrice, couponDiscountAmount);
 
-		return orderService.createOrder(data, items, totalOrderPrice, couponDiscountAmount);
+		return new OrderProcessResult(orderInfo, quantityChanges);
 	}
 
 }

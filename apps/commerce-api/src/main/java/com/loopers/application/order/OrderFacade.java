@@ -9,7 +9,8 @@ import com.loopers.domain.order.OrderData;
 import com.loopers.domain.order.OrderInfo;
 import com.loopers.domain.order.OrderService;
 import com.loopers.domain.order.event.OrderCreatedEvent;
-import com.loopers.infrastructure.order.OrderEventPublisher;
+import com.loopers.domain.product.ProductData;
+import com.loopers.domain.product.event.ProductQuantityChangedEvent;
 import com.loopers.support.event.EventPublisher;
 
 import lombok.RequiredArgsConstructor;
@@ -21,11 +22,13 @@ public class OrderFacade {
 	private final OrderService orderService;
 	private final OrderProcessor orderProcessor;
 	private final EventPublisher eventPublisher;
-	private final OrderEventPublisher orderEventPublisher;
 
 	@Transactional
 	public OrderResult createOrder(final OrderCommand.CreateOrder command) {
-		OrderInfo orderInfo = orderProcessor.process(command);
+		OrderProcessResult processResult = orderProcessor.process(command);
+		publishQuantityChangedEvents(processResult.quantityChanges());
+
+		OrderInfo orderInfo = processResult.orderInfo();
 
 		OrderCreatedEvent.PaymentMetadata paymentMetadata = OrderCreatedEvent.PaymentMetadata.of(
 			command.cardType(),
@@ -35,9 +38,18 @@ public class OrderFacade {
 
 		OrderCreatedEvent orderCreatedEvent = OrderCreatedEvent.from(orderInfo, paymentMetadata);
 		eventPublisher.publish(orderCreatedEvent);
-		orderEventPublisher.publish(orderCreatedEvent.userId(), orderCreatedEvent.orderId(), orderCreatedEvent.totalAmount());
 
 		return OrderResult.from(orderInfo);
+	}
+
+	private void publishQuantityChangedEvents(final List<ProductData.StockQuantityChanged> quantityChanges) {
+		for (ProductData.StockQuantityChanged quantityChange : quantityChanges) {
+			eventPublisher.publish(ProductQuantityChangedEvent.create(
+				quantityChange.productId(),
+				quantityChange.previousQuantity(),
+				quantityChange.currentQuantity()
+			));
+		}
 	}
 
 	public List<OrderResult> getOrders(final OrderQuery.GetOrders command) {

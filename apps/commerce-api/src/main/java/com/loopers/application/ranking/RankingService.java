@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.loopers.domain.product.ProductInfo;
 import com.loopers.domain.product.ProductId;
-import com.loopers.domain.product.ProductService;
+import com.loopers.domain.product.ProductQueryService;
 import com.loopers.domain.rank.RankingItem;
 import com.loopers.domain.rank.RankingPageData;
 import com.loopers.domain.rank.RankingPeriod;
@@ -24,7 +24,7 @@ import lombok.RequiredArgsConstructor;
 public class RankingService implements RankingUseCase {
 
 	private final RankingQueryService rankingQueryService;
-	private final ProductService productService;
+	private final ProductQueryService productQueryService;
 
 	@Transactional(readOnly = true)
 	@Override
@@ -76,7 +76,7 @@ public class RankingService implements RankingUseCase {
 			.map(ProductId::of)
 			.toList();
 
-		Map<ProductId, ProductInfo> productMap = productService.getProductByIds(ids);
+		Map<ProductId, ProductInfo> productMap = productQueryService.getProductByIds(ids);
 
 		List<RankingProductResult> items = page.getContent().stream()
 			.map(item -> {
