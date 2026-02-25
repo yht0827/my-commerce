@@ -1,22 +1,29 @@
 # ERD (Entity Relationship Diagram)
 
-> 데이터베이스 테이블 구조 및 관계
+> 기준: `apps/commerce-api/src/main/resources/db/schema/mysql/commerce-api-schema.sql`
 
 ## 목차
 
 - [전체 ERD](#전체-erd)
+- [핵심 관계 설명](#핵심-관계-설명)
 - [테이블 상세](#테이블-상세)
   - [users](#users)
   - [points](#points)
   - [point_histories](#point_histories)
   - [brands](#brands)
-  - [product](#product)
-  - [stock](#stock)
+  - [products](#products)
+  - [product_aggregate](#product_aggregate)
+  - [product_counter_event_history](#product_counter_event_history)
+  - [product_ranking](#product_ranking)
   - [likes](#likes)
+  - [stocks](#stocks)
   - [coupons](#coupons)
   - [orders](#orders)
-  - [order_item](#order_item)
-  - [payment](#payment)
+  - [order_items](#order_items)
+  - [order_history](#order_history)
+  - [event_outbox](#event_outbox)
+  - [payment_callback_history](#payment_callback_history)
+  - [payments](#payments)
 
 ---
 
@@ -24,138 +31,72 @@
 
 ```mermaid
 erDiagram
-    users ||--o{ points : has
+    users ||--|| points : has
     users ||--o{ point_histories : has
     users ||--o{ likes : creates
     users ||--o{ coupons : owns
     users ||--o{ orders : places
+    users ||--o{ payments : pays
 
-    brands ||--o{ product : owns
+    brands ||--o{ products : owns
     brands ||--o{ coupons : issues
 
-    product ||--|| stock : has
-    product ||--o{ likes : receives
-    product ||--o{ coupons : issues
-    product ||--o{ order_item : included_in
+    products ||--|| stocks : has
+    products ||--|| product_aggregate : aggregates
+    products ||--o{ likes : receives
+    products ||--o{ order_items : included_in
+    products ||--o{ coupons : target
+    products ||--o{ product_ranking : ranked
+    products ||--o{ product_counter_event_history : event_histories
 
-    orders ||--o{ order_item : contains
-    orders ||--|| payment : has
+    orders ||--o{ order_items : contains
+    orders ||--o{ order_history : idempotency
+    orders ||--o{ payments : payment_attempts
 
     users {
-        bigint id PK
-        varchar user_id UK "사용자 ID"
-        varchar email UK "이메일"
-        varchar gender "성별 (MALE/FEMALE/OTHER)"
-        varchar birthday "생년월일 (yyyy-MM-dd)"
-        datetime created_at "가입일시"
-        datetime updated_at "수정일시"
-        datetime deleted_at "삭제일시(소프트 삭제)"
+      bigint id PK
+      varchar user_id UK
+      varchar email UK
     }
 
-    points {
-        bigint id PK
-        varchar user_id FK,UK "사용자 ID"
-        decimal balance "잔액"
-        datetime created_at "생성일시"
-        datetime updated_at "수정일시"
-        datetime deleted_at "삭제일시(소프트 삭제)"
-    }
-
-    point_histories {
-        bigint id PK
-        varchar user_id FK "사용자 ID"
-        decimal amount "금액"
-        varchar type "유형 (CHARGE/USE/REFUND)"
-        varchar description "설명"
-        datetime created_at "생성일시"
-        datetime updated_at "수정일시"
-        datetime deleted_at "삭제일시(소프트 삭제)"
-    }
-
-    brands {
-        bigint id PK
-        varchar name "브랜드명"
-        varchar description "설명"
-        varchar logo_url "로고 URL"
-        datetime created_at "생성일시"
-        datetime updated_at "수정일시"
-        datetime deleted_at "삭제일시(소프트 삭제)"
-    }
-
-    product {
-        bigint id PK
-        bigint brand_id FK "브랜드 ID"
-        varchar name "상품명"
-        text description "상품 설명"
-        bigint price "가격(KRW, 원 단위 정수)"
-        varchar status "상태 (ON_SALE/SOLD_OUT/DISCONTINUED)"
-        bigint like_count "좋아요 수"
-        datetime created_at "생성일시"
-        datetime updated_at "수정일시"
-    }
-
-    stock {
-        bigint id PK
-        bigint product_id FK,UK "상품 ID"
-        int quantity "수량"
-        datetime updated_at "수정일시"
-    }
-
-    likes {
-        bigint id PK
-        varchar user_id FK "사용자 ID"
-        bigint product_id FK "상품 ID"
-        datetime created_at "생성일시"
-    }
-
-    coupons {
-        bigint id PK
-        varchar user_id FK "사용자 ID"
-        bigint product_id FK "상품 ID"
-        bigint brand_id FK "브랜드 ID"
-        varchar coupon_name "쿠폰명"
-        bigint discount_value "할인 값(FIXED: KRW, PERCENTAGE: 정수 비율 0~100)"
-        bigint max_discount_amount "최대 할인 금액"
-        varchar coupon_type "쿠폰 타입 (FIXED_AMOUNT/PERCENTAGE)"
-        datetime issued_at "발급일시"
-        datetime used_at "사용일시"
-        datetime expired_at "만료일시"
-        varchar coupon_status "상태 (ACTIVE/INACTIVE/EXPIRED/USED)"
-        bigint version "낙관적 락 버전"
-        datetime created_at "생성일시"
-        datetime updated_at "수정일시"
-        datetime deleted_at "삭제일시(소프트 삭제)"
+    products {
+      bigint id PK
+      bigint brand_id FK
+      varchar name
+      bigint price
+      bigint quantity
+      varchar status
+      bigint version
     }
 
     orders {
-        bigint id PK
-        varchar user_id FK "사용자 ID"
-        varchar order_number UK "주문번호"
-        varchar status "상태 (PENDING/PAID/COMPLETED/CANCELLED)"
-        bigint total_amount "총 금액"
-        datetime ordered_at "주문일시"
-        datetime updated_at "수정일시"
+      bigint id PK
+      varchar order_number UK
+      varchar user_id FK
+      bigint total_price
+      bigint coupon_discount_amount
+      bigint final_payment_amount
+      varchar status
     }
 
-    order_item {
-        bigint id PK
-        bigint order_id FK "주문 ID"
-        bigint product_id FK "상품 ID"
-        varchar product_name "상품명 (스냅샷)"
-        bigint price "가격 (스냅샷)"
-        int quantity "수량"
-        bigint subtotal "소계"
-    }
-
-    payment {
-        bigint id PK
-        bigint order_id FK,UK "주문 ID"
-        bigint amount "결제 금액(KRW, 원 단위 정수)"
-        varchar method "결제 수단 (POINT)"
-        varchar status "상태 (PENDING/COMPLETED/FAILED/REFUNDED)"
-        datetime paid_at "결제일시"
+    payments {
+      bigint id PK
+      varchar order_id FK
+      varchar user_id FK
+      varchar transaction_key UK
+      varchar status
+      bigint version
     }
 ```
+
+---
+
+## 핵심 관계 설명
+
+- `orders`와 `order_items`, `payments`는 숫자 PK가 아니라 `order_number` 문자열을 참조키로 사용한다.
+- 주문 멱등성은 `order_history(user_id, idempotency_key)` 유니크 제약으로 강제한다.
+- 외부 연동 신뢰성을 위해 업무 테이블과 별도로 `event_outbox`, `payment_callback_history`, `product_counter_event_history`를 둔다.
+- 상품 조회 성능/정렬을 위해 `product_aggregate(like_count, order_count, view_count)`를 분리 유지한다.
 
 ---
 
@@ -163,429 +104,267 @@ erDiagram
 
 ### users
 
-> 회원 정보 테이블
-
 | 컬럼명 | 타입 | 제약조건 | 설명 |
-|--------|------|----------|------|
-| id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
-| user_id | VARCHAR(20) | UK, NOT NULL | 사용자 ID |
+|---|---|---|---|
+| id | BIGINT | PK, AUTO_INCREMENT | 사용자 PK |
+| user_id | VARCHAR(20) | UK, NOT NULL | 사용자 식별자 |
 | email | VARCHAR(255) | UK, NOT NULL | 이메일 |
-| gender | VARCHAR(20) | NOT NULL | 성별 (MALE/FEMALE/OTHER) |
-| birthday | VARCHAR(10) | NOT NULL | 생년월일 (`yyyy-MM-dd`) |
-| created_at | DATETIME(6) | NOT NULL | 가입일시 |
-| updated_at | DATETIME(6) | NOT NULL | 수정일시 |
-| deleted_at | DATETIME(6) | NULL | 삭제일시(소프트 삭제) |
-
-**인덱스**
-- `uk_users_user_id` (UNIQUE): user_id
-- `uk_users_email` (UNIQUE): email
-
----
+| birthday | VARCHAR(10) | NOT NULL | 생년월일 |
+| gender | VARCHAR(20) | NOT NULL | 성별 |
+| created_at | DATETIME(6) | NOT NULL | 생성시각 |
+| updated_at | DATETIME(6) | NOT NULL | 수정시각 |
+| deleted_at | DATETIME(6) | NULL | 소프트삭제 |
 
 ### points
 
-> 포인트 잔액 테이블
-
 | 컬럼명 | 타입 | 제약조건 | 설명 |
-|--------|------|----------|------|
-| id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
-| user_id | VARCHAR(20) | FK, UK, NOT NULL | 사용자 ID |
-| balance | DECIMAL(19,2) | NOT NULL | 잔액 |
-| created_at | DATETIME(6) | NOT NULL | 생성일시 |
-| updated_at | DATETIME(6) | NOT NULL | 수정일시 |
-| deleted_at | DATETIME(6) | NULL | 삭제일시(소프트 삭제) |
-
-**인덱스**
-- `uk_points_user_id` (UNIQUE): user_id
-
-**외래키**
-- `fk_points_user_id`: user_id → users(user_id)
-
----
+|---|---|---|---|
+| id | BIGINT | PK, AUTO_INCREMENT | 포인트 PK |
+| user_id | VARCHAR(20) | UK, FK, NOT NULL | 사용자 |
+| balance | DECIMAL(19,2) | NOT NULL | 현재 잔액 |
+| created_at | DATETIME(6) | NOT NULL | 생성시각 |
+| updated_at | DATETIME(6) | NOT NULL | 수정시각 |
+| deleted_at | DATETIME(6) | NULL | 소프트삭제 |
 
 ### point_histories
 
-> 포인트 이력 테이블
-
 | 컬럼명 | 타입 | 제약조건 | 설명 |
-|--------|------|----------|------|
-| id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
-| user_id | VARCHAR(20) | FK, NOT NULL | 사용자 ID |
-| amount | DECIMAL(19,2) | NOT NULL | 금액 |
-| type | VARCHAR(20) | NOT NULL | 유형 (CHARGE/USE/REFUND) |
-| description | VARCHAR(200) | | 설명 |
-| created_at | DATETIME(6) | NOT NULL | 생성일시 |
-| updated_at | DATETIME(6) | NOT NULL | 수정일시 |
-| deleted_at | DATETIME(6) | NULL | 삭제일시(소프트 삭제) |
+|---|---|---|---|
+| id | BIGINT | PK, AUTO_INCREMENT | 이력 PK |
+| user_id | VARCHAR(20) | FK, NOT NULL | 사용자 |
+| amount | DECIMAL(19,2) | NOT NULL | 증감 금액 |
+| type | VARCHAR(20) | NOT NULL | CHARGE/USE/REFUND |
+| description | VARCHAR(200) | NULL | 설명 |
+| created_at | DATETIME(6) | NOT NULL | 생성시각 |
+| updated_at | DATETIME(6) | NOT NULL | 수정시각 |
+| deleted_at | DATETIME(6) | NULL | 소프트삭제 |
 
-**인덱스**
-- `idx_point_histories_user_id_created_at`: (user_id, created_at DESC)
-
-**외래키**
-- `fk_point_histories_user_id`: user_id → users(user_id)
-
----
+인덱스: `(user_id, created_at DESC)`
 
 ### brands
 
-> 브랜드 정보 테이블
-
 | 컬럼명 | 타입 | 제약조건 | 설명 |
-|--------|------|----------|------|
-| id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
+|---|---|---|---|
+| id | BIGINT | PK, AUTO_INCREMENT | 브랜드 PK |
 | name | VARCHAR(100) | NOT NULL | 브랜드명 |
-| description | VARCHAR(500) | | 설명 |
-| logo_url | VARCHAR(500) | | 로고 URL |
-| created_at | DATETIME(6) | NOT NULL | 생성일시 |
-| updated_at | DATETIME(6) | NOT NULL | 수정일시 |
-| deleted_at | DATETIME(6) | NULL | 삭제일시(소프트 삭제) |
+| description | VARCHAR(500) | NULL | 설명 |
+| logo_url | VARCHAR(500) | NULL | 로고 URL |
+| created_at | DATETIME(6) | NOT NULL | 생성시각 |
+| updated_at | DATETIME(6) | NOT NULL | 수정시각 |
+| deleted_at | DATETIME(6) | NULL | 소프트삭제 |
 
----
-
-### product
-
-> 상품 정보 테이블
+### products
 
 | 컬럼명 | 타입 | 제약조건 | 설명 |
-|--------|------|----------|------|
-| id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
-| brand_id | BIGINT | FK, NOT NULL | 브랜드 ID |
-| name | VARCHAR(200) | NOT NULL | 상품명 |
-| description | TEXT | | 상품 설명 |
-| price | BIGINT | NOT NULL | 가격(KRW, 원 단위 정수) |
-| status | VARCHAR(20) | NOT NULL, DEFAULT 'ON_SALE' | 상태 |
-| like_count | BIGINT | NOT NULL, DEFAULT 0 | 좋아요 수 |
-| created_at | DATETIME | NOT NULL | 생성일시 |
-| updated_at | DATETIME | NOT NULL | 수정일시 |
+|---|---|---|---|
+| id | BIGINT | PK, AUTO_INCREMENT | 상품 PK |
+| brand_id | BIGINT | FK, NOT NULL | 브랜드 |
+| name | VARCHAR(255) | NOT NULL | 상품명 |
+| price | BIGINT | NOT NULL, CHECK>=0 | 가격 |
+| quantity | BIGINT | NOT NULL, CHECK>=0 | 수량 |
+| status | VARCHAR(20) | NOT NULL | ON_SALE/SOLD_OUT/... |
+| version | BIGINT | NULL | 낙관적 버전 |
+| created_at | DATETIME(6) | NOT NULL | 생성시각 |
+| updated_at | DATETIME(6) | NOT NULL | 수정시각 |
+| deleted_at | DATETIME(6) | NULL | 소프트삭제 |
 
-**인덱스**
-- `idx_product_brand_id`: brand_id
-- `idx_product_status`: status
-- `idx_product_created_at`: created_at DESC
-- `idx_product_like_count`: like_count DESC
+인덱스: `brand_id`, `status`
 
-**외래키**
-- `fk_product_brand`: brand_id → brands(id)
-
----
-
-### stock
-
-> 재고 정보 테이블
+### product_aggregate
 
 | 컬럼명 | 타입 | 제약조건 | 설명 |
-|--------|------|----------|------|
-| id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
-| product_id | BIGINT | FK, UK, NOT NULL | 상품 ID |
-| quantity | INT | NOT NULL, DEFAULT 0 | 수량 |
-| updated_at | DATETIME | NOT NULL | 수정일시 |
+|---|---|---|---|
+| id | BIGINT | PK, AUTO_INCREMENT | 집계 PK |
+| product_id | BIGINT | UK, FK, NOT NULL | 상품 |
+| like_count | BIGINT | NOT NULL, CHECK>=0 | 좋아요 수 |
+| order_count | BIGINT | NOT NULL, CHECK>=0 | 주문 수 |
+| view_count | BIGINT | NOT NULL, CHECK>=0 | 조회 수 |
+| created_at | DATETIME(6) | NOT NULL | 생성시각 |
+| updated_at | DATETIME(6) | NOT NULL | 수정시각 |
+| deleted_at | DATETIME(6) | NULL | 소프트삭제 |
 
-**인덱스**
-- `uk_stock_product_id` (UNIQUE): product_id
+### product_counter_event_history
 
-**외래키**
-- `fk_stock_product`: product_id → product(id)
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+|---|---|---|---|
+| id | BIGINT | PK, AUTO_INCREMENT | 이력 PK |
+| dedupe_key | VARCHAR(128) | UK, NOT NULL | 멱등 키 |
+| product_id | BIGINT | NOT NULL | 상품 |
+| counter_type | VARCHAR(20) | NOT NULL | LIKE/ORDER/VIEW |
+| process_status | VARCHAR(20) | NOT NULL | RECEIVED/PROCESSING/COMPLETED/FAILED |
+| failed_reason | VARCHAR(255) | NULL | 실패 원인 |
+| processed_at | DATETIME(6) | NULL | 처리시각 |
+| created_at | DATETIME(6) | NOT NULL | 생성시각 |
+| updated_at | DATETIME(6) | NOT NULL | 수정시각 |
+| deleted_at | DATETIME(6) | NULL | 소프트삭제 |
 
----
+인덱스: `product_id`, `counter_type`, `process_status`
+
+### product_ranking
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+|---|---|---|---|
+| id | BIGINT | PK, AUTO_INCREMENT | 랭킹 PK |
+| product_id | BIGINT | FK, NOT NULL | 상품 |
+| rank_type | VARCHAR(20) | NOT NULL | DAILY/WEEKLY/MONTHLY |
+| rank_position | BIGINT | NOT NULL | 순위 |
+| score | DOUBLE | NOT NULL | 점수 |
+| rank_date | DATE | NOT NULL | 기준일 |
+| created_at | DATETIME(6) | NOT NULL | 생성시각 |
+| updated_at | DATETIME(6) | NOT NULL | 수정시각 |
+| deleted_at | DATETIME(6) | NULL | 소프트삭제 |
 
 ### likes
 
-> 좋아요 테이블
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+|---|---|---|---|
+| id | BIGINT | PK, AUTO_INCREMENT | 좋아요 PK |
+| user_id | VARCHAR(20) | FK, NOT NULL | 사용자 |
+| product_id | BIGINT | FK, NOT NULL | 상품 |
+| version | BIGINT | NULL | 낙관적 버전 |
+| created_at | DATETIME(6) | NOT NULL | 생성시각 |
+| updated_at | DATETIME(6) | NOT NULL | 수정시각 |
+| deleted_at | DATETIME(6) | NULL | 소프트삭제 |
+
+유니크: `(user_id, product_id)`
+
+### stocks
 
 | 컬럼명 | 타입 | 제약조건 | 설명 |
-|--------|------|----------|------|
-| id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
-| user_id | VARCHAR(20) | FK, NOT NULL | 사용자 ID |
-| product_id | BIGINT | FK, NOT NULL | 상품 ID |
-| version | BIGINT | NULL | 낙관적 락 버전 |
-| created_at | DATETIME(6) | NOT NULL | 생성일시 |
-| updated_at | DATETIME(6) | NOT NULL | 수정일시 |
-| deleted_at | DATETIME(6) | NULL | 삭제일시(소프트 삭제) |
-
-**인덱스**
-- `uk_likes_user_product` (UNIQUE): (user_id, product_id)
-- `idx_likes_user_id_created_at`: (user_id, created_at DESC)
-- `idx_likes_product_id`: product_id
-
-**외래키**
-- `fk_likes_user`: user_id → users(user_id)
-- `fk_likes_product`: product_id → products(id)
-
----
+|---|---|---|---|
+| id | BIGINT | PK, AUTO_INCREMENT | 재고 PK |
+| product_id | BIGINT | UK, FK, NOT NULL | 상품 |
+| quantity | BIGINT | NOT NULL, CHECK>=0 | 재고 수량 |
+| created_at | DATETIME(6) | NOT NULL | 생성시각 |
+| updated_at | DATETIME(6) | NOT NULL | 수정시각 |
+| deleted_at | DATETIME(6) | NULL | 소프트삭제 |
 
 ### coupons
 
-> 쿠폰 테이블
-
 | 컬럼명 | 타입 | 제약조건 | 설명 |
-|--------|------|----------|------|
-| id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
-| user_id | VARCHAR(20) | FK, NOT NULL | 쿠폰 소유 사용자 ID |
-| product_id | BIGINT | FK, NOT NULL | 대상 상품 ID |
-| brand_id | BIGINT | FK, NOT NULL | 대상 브랜드 ID |
+|---|---|---|---|
+| id | BIGINT | PK, AUTO_INCREMENT | 쿠폰 PK |
+| user_id | VARCHAR(20) | FK, NOT NULL | 사용자 |
+| product_id | BIGINT | FK, NOT NULL | 대상 상품 |
+| brand_id | BIGINT | FK, NOT NULL | 대상 브랜드 |
 | coupon_name | VARCHAR(255) | NOT NULL | 쿠폰명 |
-| discount_value | BIGINT | NOT NULL | 할인 값(FIXED_AMOUNT는 KRW 정액, PERCENTAGE는 정수 비율 0~100) |
-| max_discount_amount | BIGINT | NOT NULL | 최대 할인 금액 |
-| coupon_type | VARCHAR(20) | NOT NULL | 쿠폰 타입 (FIXED_AMOUNT/PERCENTAGE) |
-| issued_at | DATETIME(6) | NOT NULL | 발급일시 |
-| used_at | DATETIME(6) | NOT NULL | 사용일시 |
-| expired_at | DATETIME(6) | NOT NULL | 만료일시 |
-| coupon_status | VARCHAR(20) | NOT NULL | 상태 (ACTIVE/INACTIVE/EXPIRED/USED) |
-| version | BIGINT | NOT NULL, DEFAULT 0 | 낙관적 락 버전 |
-| created_at | DATETIME(6) | NOT NULL | 생성일시 |
-| updated_at | DATETIME(6) | NOT NULL | 수정일시 |
-| deleted_at | DATETIME(6) | NULL | 삭제일시(소프트 삭제) |
+| discount_value | BIGINT | NOT NULL, CHECK>=0 | 할인값 |
+| max_discount_amount | BIGINT | NULL, CHECK>=0 | 최대할인 |
+| coupon_type | VARCHAR(20) | NOT NULL | FIXED_AMOUNT/PERCENTAGE |
+| issued_at | DATETIME(6) | NOT NULL | 발급시각 |
+| used_at | DATETIME(6) | NOT NULL | 사용시각 |
+| expired_at | DATETIME(6) | NOT NULL | 만료시각 |
+| coupon_status | VARCHAR(20) | NOT NULL | 상태 |
+| version | BIGINT | NOT NULL DEFAULT 0 | 낙관적 버전 |
+| created_at | DATETIME(6) | NOT NULL | 생성시각 |
+| updated_at | DATETIME(6) | NOT NULL | 수정시각 |
+| deleted_at | DATETIME(6) | NULL | 소프트삭제 |
 
-**할인 계산 규칙**
-- `coupon_type = PERCENTAGE` 인 경우 할인 금액은 `orderAmount * discount_value / 100`으로 계산하며 소수점 이하는 버림 처리한다.
-- `coupon_type = PERCENTAGE` 인 경우 `discount_value`는 `0~100` 범위만 허용한다.
-
-**인덱스**
-- `idx_coupons_user_id`: user_id
-- `idx_coupons_product_id`: product_id
-- `idx_coupons_brand_id`: brand_id
-- `idx_coupons_status`: coupon_status
-- `idx_coupons_expired_at`: expired_at
-
-**외래키**
-- `fk_coupons_user`: user_id → users(user_id)
-- `fk_coupons_product`: product_id → product(id)
-- `fk_coupons_brand`: brand_id → brands(id)
-
----
+체크: `PERCENTAGE` 타입일 때 `discount_value` 0~100
 
 ### orders
 
-> 주문 테이블
-
 | 컬럼명 | 타입 | 제약조건 | 설명 |
-|--------|------|----------|------|
-| id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
-| user_id | VARCHAR(20) | FK, NOT NULL | 사용자 ID |
+|---|---|---|---|
+| id | BIGINT | PK, AUTO_INCREMENT | 주문 PK |
+| user_id | VARCHAR(20) | FK, NOT NULL | 사용자 |
+| total_price | BIGINT | NOT NULL, CHECK>=0 | 총액 |
+| coupon_discount_amount | BIGINT | NOT NULL, CHECK>=0 | 쿠폰할인 |
+| final_payment_amount | BIGINT | NOT NULL, CHECK>=0 | 최종결제액 |
 | order_number | VARCHAR(50) | UK, NOT NULL | 주문번호 |
-| status | VARCHAR(20) | NOT NULL, DEFAULT 'PENDING' | 상태 |
-| total_amount | BIGINT | NOT NULL | 총 금액 |
-| ordered_at | DATETIME | NOT NULL | 주문일시 |
-| updated_at | DATETIME | NOT NULL | 수정일시 |
+| status | VARCHAR(20) | NOT NULL | PENDING/CONFIRMED/... |
+| created_at | DATETIME(6) | NOT NULL | 생성시각 |
+| updated_at | DATETIME(6) | NOT NULL | 수정시각 |
+| deleted_at | DATETIME(6) | NULL | 소프트삭제 |
 
-**인덱스**
-- `uk_orders_order_number` (UNIQUE): order_number
-- `idx_orders_user_id_ordered_at`: (user_id, ordered_at DESC)
-- `idx_orders_status`: status
+인덱스: `(user_id, created_at DESC)`, `status`
 
-**외래키**
-- `fk_orders_user`: user_id → users(user_id)
-
----
-
-### order_item
-
-> 주문 상품 테이블
+### order_items
 
 | 컬럼명 | 타입 | 제약조건 | 설명 |
-|--------|------|----------|------|
-| id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
-| order_id | BIGINT | FK, NOT NULL | 주문 ID |
-| product_id | BIGINT | FK, NOT NULL | 상품 ID |
-| product_name | VARCHAR(200) | NOT NULL | 상품명 (스냅샷) |
-| price | BIGINT | NOT NULL | 가격 (스냅샷) |
-| quantity | INT | NOT NULL | 수량 |
-| subtotal | BIGINT | NOT NULL | 소계 |
+|---|---|---|---|
+| id | BIGINT | PK, AUTO_INCREMENT | 주문항목 PK |
+| order_id | VARCHAR(50) | FK, NOT NULL | 주문번호(orders.order_number) |
+| product_id | BIGINT | FK, NOT NULL | 상품 |
+| quantity | BIGINT | NOT NULL, CHECK>=0 | 수량 |
+| price | BIGINT | NOT NULL, CHECK>=0 | 주문시점 단가 |
+| created_at | DATETIME(6) | NOT NULL | 생성시각 |
+| updated_at | DATETIME(6) | NOT NULL | 수정시각 |
+| deleted_at | DATETIME(6) | NULL | 소프트삭제 |
 
-**인덱스**
-- `idx_order_item_order_id`: order_id
-
-**외래키**
-- `fk_order_item_order`: order_id → orders(id)
-- `fk_order_item_product`: product_id → product(id)
-
----
-
-### payment
-
-> 결제 정보 테이블
+### order_history
 
 | 컬럼명 | 타입 | 제약조건 | 설명 |
-|--------|------|----------|------|
-| id | BIGINT | PK, AUTO_INCREMENT | 기본키 |
-| order_id | BIGINT | FK, UK, NOT NULL | 주문 ID |
-| amount | BIGINT | NOT NULL | 결제 금액(KRW, 원 단위 정수) |
-| method | VARCHAR(20) | NOT NULL | 결제 수단 (POINT) |
-| status | VARCHAR(20) | NOT NULL, DEFAULT 'PENDING' | 상태 |
-| paid_at | DATETIME | | 결제일시 |
+|---|---|---|---|
+| id | BIGINT | PK, AUTO_INCREMENT | 이력 PK |
+| user_id | VARCHAR(20) | FK, NOT NULL | 사용자 |
+| idempotency_key | VARCHAR(100) | NOT NULL | 멱등 키 |
+| order_id | VARCHAR(50) | FK, NULL | 완료 주문번호 |
+| created_at | DATETIME(6) | NOT NULL | 생성시각 |
+| updated_at | DATETIME(6) | NOT NULL | 수정시각 |
+| deleted_at | DATETIME(6) | NULL | 소프트삭제 |
 
-**인덱스**
-- `uk_payment_order_id` (UNIQUE): order_id
+유니크: `(user_id, idempotency_key)`
 
-**외래키**
-- `fk_payment_order`: order_id → orders(id)
+### event_outbox
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+|---|---|---|---|
+| id | BIGINT | PK, AUTO_INCREMENT | outbox PK |
+| event_type | VARCHAR(50) | NOT NULL | 이벤트 타입 |
+| aggregate_id | VARCHAR(100) | NOT NULL | aggregate 식별자 |
+| dedupe_key | VARCHAR(150) | UK, NOT NULL | 멱등 키 |
+| payload | LONGTEXT | NOT NULL | 직렬화 payload |
+| status | VARCHAR(20) | NOT NULL | PENDING/PROCESSING/COMPLETED/FAILED |
+| retry_count | INT | NOT NULL DEFAULT 0 | 재시도 횟수 |
+| next_retry_at | DATETIME(6) | NOT NULL | 다음 재시도 시각 |
+| last_error | VARCHAR(500) | NULL | 마지막 에러 |
+| created_at | DATETIME(6) | NOT NULL | 생성시각 |
+| updated_at | DATETIME(6) | NOT NULL | 수정시각 |
+| deleted_at | DATETIME(6) | NULL | 소프트삭제 |
+
+인덱스: `(status, next_retry_at)`, `(event_type, created_at)`
+
+### payment_callback_history
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+|---|---|---|---|
+| id | BIGINT | PK, AUTO_INCREMENT | 이력 PK |
+| dedupe_key | VARCHAR(128) | UK, NOT NULL | 멱등 키 |
+| transaction_key | VARCHAR(255) | NULL | 거래키 |
+| order_id | VARCHAR(50) | NULL | 주문번호 |
+| callback_status | VARCHAR(20) | NULL | 콜백 상태 |
+| process_status | VARCHAR(20) | NOT NULL | RECEIVED/PROCESSING/COMPLETED/FAILED |
+| failed_reason | VARCHAR(255) | NULL | 실패 이유 |
+| processed_at | DATETIME(6) | NULL | 처리시각 |
+| created_at | DATETIME(6) | NOT NULL | 생성시각 |
+| updated_at | DATETIME(6) | NOT NULL | 수정시각 |
+| deleted_at | DATETIME(6) | NULL | 소프트삭제 |
+
+### payments
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+|---|---|---|---|
+| id | BIGINT | PK, AUTO_INCREMENT | 결제 PK |
+| order_id | VARCHAR(50) | FK, NOT NULL | 주문번호 |
+| user_id | VARCHAR(20) | FK, NOT NULL | 사용자 |
+| card_type | VARCHAR(20) | NOT NULL | 카드사 타입 |
+| card_no | VARCHAR(19) | NOT NULL | 카드번호 |
+| price | BIGINT | NOT NULL, CHECK>=0 | 결제금액 |
+| callback_url | VARCHAR(500) | NOT NULL | 콜백 URL |
+| transaction_key | VARCHAR(255) | UK, NULL | 거래키 |
+| status | VARCHAR(20) | NOT NULL | INITIAL/PENDING/SUCCESS/FAILED |
+| reason | VARCHAR(255) | NOT NULL | 상태 설명 |
+| version | BIGINT | NOT NULL DEFAULT 0 | 낙관적 버전 |
+| created_at | DATETIME(6) | NOT NULL | 생성시각 |
+| updated_at | DATETIME(6) | NOT NULL | 수정시각 |
+| deleted_at | DATETIME(6) | NULL | 소프트삭제 |
 
 ---
 
-## DDL 스크립트
+## 운영 관점 체크포인트
 
-```sql
--- users
-CREATE TABLE users (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(20) NOT NULL,
-    email VARCHAR(255) NOT NULL,
-    birthday VARCHAR(10) NOT NULL,
-    gender VARCHAR(20) NOT NULL,
-    created_at DATETIME(6) NOT NULL,
-    updated_at DATETIME(6) NOT NULL,
-    deleted_at DATETIME(6) NULL,
-    UNIQUE KEY uk_users_user_id (user_id),
-    UNIQUE KEY uk_users_email (email)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- points
-CREATE TABLE points (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(20) NOT NULL,
-    balance DECIMAL(19,2) NOT NULL,
-    created_at DATETIME(6) NOT NULL,
-    updated_at DATETIME(6) NOT NULL,
-    deleted_at DATETIME(6) NULL,
-    UNIQUE KEY uk_points_user_id (user_id),
-    CONSTRAINT fk_points_user_id FOREIGN KEY (user_id) REFERENCES users(user_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- point_histories
-CREATE TABLE point_histories (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(20) NOT NULL,
-    amount DECIMAL(19,2) NOT NULL,
-    type VARCHAR(20) NOT NULL,
-    description VARCHAR(200),
-    created_at DATETIME(6) NOT NULL,
-    updated_at DATETIME(6) NOT NULL,
-    deleted_at DATETIME(6) NULL,
-    INDEX idx_point_histories_user_id_created_at (user_id, created_at DESC),
-    CONSTRAINT fk_point_histories_user_id FOREIGN KEY (user_id) REFERENCES users(user_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- brands
-CREATE TABLE brands (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    description VARCHAR(500),
-    logo_url VARCHAR(500),
-    created_at DATETIME(6) NOT NULL,
-    updated_at DATETIME(6) NOT NULL,
-    deleted_at DATETIME(6) NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- product
-CREATE TABLE product (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    brand_id BIGINT NOT NULL,
-    name VARCHAR(200) NOT NULL,
-    description TEXT,
-    price BIGINT NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'ON_SALE',
-    like_count BIGINT NOT NULL DEFAULT 0,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_product_brand_id (brand_id),
-    INDEX idx_product_status (status),
-    INDEX idx_product_created_at (created_at DESC),
-    INDEX idx_product_like_count (like_count DESC),
-    CONSTRAINT fk_product_brand FOREIGN KEY (brand_id) REFERENCES brands(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- stock
-CREATE TABLE stock (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    product_id BIGINT NOT NULL,
-    quantity INT NOT NULL DEFAULT 0,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_stock_product_id (product_id),
-    CONSTRAINT fk_stock_product FOREIGN KEY (product_id) REFERENCES product(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- likes
-CREATE TABLE likes (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(20) NOT NULL,
-    product_id BIGINT NOT NULL,
-    version BIGINT NULL,
-    created_at DATETIME(6) NOT NULL,
-    updated_at DATETIME(6) NOT NULL,
-    deleted_at DATETIME(6) NULL,
-    UNIQUE KEY uk_likes_user_product (user_id, product_id),
-    INDEX idx_likes_user_id_created_at (user_id, created_at DESC),
-    INDEX idx_likes_product_id (product_id),
-    CONSTRAINT fk_likes_user_id FOREIGN KEY (user_id) REFERENCES users(user_id),
-    CONSTRAINT fk_likes_product_id FOREIGN KEY (product_id) REFERENCES products(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- coupons
-CREATE TABLE coupons (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(20) NOT NULL,
-    product_id BIGINT NOT NULL,
-    brand_id BIGINT NOT NULL,
-    coupon_name VARCHAR(255) NOT NULL,
-    discount_value BIGINT NOT NULL,
-    max_discount_amount BIGINT NOT NULL,
-    coupon_type VARCHAR(20) NOT NULL,
-    issued_at DATETIME(6) NOT NULL,
-    used_at DATETIME(6) NOT NULL,
-    expired_at DATETIME(6) NOT NULL,
-    coupon_status VARCHAR(20) NOT NULL,
-    version BIGINT NOT NULL DEFAULT 0,
-    created_at DATETIME(6) NOT NULL,
-    updated_at DATETIME(6) NOT NULL,
-    deleted_at DATETIME(6) NULL,
-    INDEX idx_coupons_user_id (user_id),
-    INDEX idx_coupons_product_id (product_id),
-    INDEX idx_coupons_brand_id (brand_id),
-    INDEX idx_coupons_status (coupon_status),
-    INDEX idx_coupons_expired_at (expired_at),
-    CONSTRAINT fk_coupons_user FOREIGN KEY (user_id) REFERENCES users(user_id),
-    CONSTRAINT fk_coupons_product FOREIGN KEY (product_id) REFERENCES product(id),
-    CONSTRAINT fk_coupons_brand FOREIGN KEY (brand_id) REFERENCES brands(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- orders
-CREATE TABLE orders (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(20) NOT NULL,
-    order_number VARCHAR(50) NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
-    total_amount BIGINT NOT NULL,
-    ordered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_orders_order_number (order_number),
-    INDEX idx_orders_user_id_ordered_at (user_id, ordered_at DESC),
-    INDEX idx_orders_status (status),
-    CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(user_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- order_item
-CREATE TABLE order_item (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    order_id BIGINT NOT NULL,
-    product_id BIGINT NOT NULL,
-    product_name VARCHAR(200) NOT NULL,
-    price BIGINT NOT NULL,
-    quantity INT NOT NULL,
-    subtotal BIGINT NOT NULL,
-    INDEX idx_order_item_order_id (order_id),
-    CONSTRAINT fk_order_item_order FOREIGN KEY (order_id) REFERENCES orders(id),
-    CONSTRAINT fk_order_item_product FOREIGN KEY (product_id) REFERENCES product(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- payment
-CREATE TABLE payment (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    order_id BIGINT NOT NULL,
-    amount BIGINT NOT NULL,
-    method VARCHAR(20) NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
-    paid_at DATETIME,
-    UNIQUE KEY uk_payment_order_id (order_id),
-    CONSTRAINT fk_payment_order FOREIGN KEY (order_id) REFERENCES orders(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-```
+- 주문 중복 제어: `order_history` 유니크 키 + 애플리케이션 claim 로직
+- 콜백 중복 제어: `payment_callback_history.dedupe_key`
+- 이벤트 중복 제어: `event_outbox.dedupe_key`, `product_counter_event_history.dedupe_key`
+- 읽기모델 보정: `product_aggregate`는 이벤트 처리 + 리컨실 스케줄러 병행

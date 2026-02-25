@@ -36,6 +36,13 @@ public class Balance implements Serializable {
 		return new Balance(this.balance.add(amount.getBalance()));
 	}
 
+	public Balance use(final Balance amount) {
+		if (this.balance.compareTo(amount.getBalance()) < 0) {
+			throw new CoreException(BAD_REQUEST, POINT_INSUFFICIENT.format());
+		}
+		return new Balance(this.balance.subtract(amount.getBalance()));
+	}
+
 	public static Balance of(final BigDecimal amount) {
 		return new Balance(amount);
 	}

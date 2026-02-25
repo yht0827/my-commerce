@@ -7,15 +7,18 @@ import com.redis.testcontainers.RedisContainer;
 
 @Configuration
 public class RedisTestContainersConfig {
-	private static final RedisContainer redisContainer = new RedisContainer(DockerImageName.parse("redis:latest"));
+	private static final String REDIS_IMAGE = "redis:7.0";
+
+	private static final RedisContainer redisContainer = new RedisContainer(DockerImageName.parse(REDIS_IMAGE));
 
 	static {
 		redisContainer.start();
-		System.setProperty("datasource.redis.database", "0");
-		System.setProperty("datasource.redis.master.host", redisContainer.getHost());
-		System.setProperty("datasource.redis.master.port", String.valueOf(redisContainer.getFirstMappedPort()));
-		System.setProperty("datasource.redis.replicas[0].host", redisContainer.getHost());
-		System.setProperty("datasource.redis.replicas[0].port", String.valueOf(redisContainer.getFirstMappedPort()));
+		String host = redisContainer.getHost();
+		String port = String.valueOf(redisContainer.getFirstMappedPort());
+
+		System.setProperty("REDIS_MASTER_HOST", host);
+		System.setProperty("REDIS_MASTER_PORT", port);
+		System.setProperty("REDIS_REPLICA_1_HOST", host);
+		System.setProperty("REDIS_REPLICA_1_PORT", port);
 	}
 }
-

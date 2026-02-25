@@ -1,0 +1,297 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: commerce-api-alerts
+    folder: Commerce
+    interval: 1m
+    rules:
+      - uid: commerce_order_5xx_rate
+        title: Commerce API Order 5xx rate high
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              editorMode: code
+              expr: 100 * sum(rate(http_server_requests_seconds_count{application="commerce-api",uri="/api/v1/orders",method="POST",status=~"5.."}[5m])) / clamp_min(sum(rate(http_server_requests_seconds_count{application="commerce-api",uri="/api/v1/orders",method="POST"}[5m])), 1e-9)
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
+        dashboardUid: commerce-order-sli
+        panelId: 4
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: warning
+          service: commerce-api
+          category: sli
+        annotations:
+          summary: Order 5xx rate is above 1%
+          runbook: Check app logs and DB pool metrics.
+        isPaused: false
+
+      - uid: commerce_order_p99
+        title: Commerce API Order p99 latency high
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              editorMode: code
+              expr: 1000 * histogram_quantile(0.99, sum by (le)(rate(http_server_requests_seconds_bucket{application="commerce-api",uri="/api/v1/orders",method="POST"}[5m])))
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 1000
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
+        dashboardUid: commerce-order-sli
+        panelId: 3
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: warning
+          service: commerce-api
+          category: latency
+        annotations:
+          summary: Order p99 latency is above 1000ms
+          runbook: Check DB pending connections and lock contention.
+        isPaused: false
+
+      - uid: commerce_order_p999
+        title: Commerce API Order p99.9 latency high
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              editorMode: code
+              expr: 1000 * histogram_quantile(0.999, sum by (le)(rate(http_server_requests_seconds_bucket{application="commerce-api",uri="/api/v1/orders",method="POST"}[5m])))
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 2000
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
+        dashboardUid: commerce-order-sli
+        panelId: 5
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: critical
+          service: commerce-api
+          category: latency
+        annotations:
+          summary: Order p99.9 latency is above 2000ms
+          runbook: Investigate tail latency hotspots and lock contention.
+        isPaused: false
+
+      - uid: commerce_hikari_timeout
+        title: Commerce API Hikari timeout increased
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              editorMode: code
+              expr: increase(hikaricp_connections_timeout_total{application="commerce-api",pool="mysql-main-pool"}[5m])
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 0
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
+        dashboardUid: commerce-lock-db
+        panelId: 4
+        noDataState: NoData
+        execErrState: Error
+        for: 1m
+        labels:
+          severity: critical
+          service: commerce-api
+          category: db
+        annotations:
+          summary: Hikari timeout increased in last 5m
+          runbook: Check mysql-main-pool pending/active and DB lock waits.
+        isPaused: false
+
+      - uid: commerce_heap_usage
+        title: Commerce API heap usage high
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 300
+              to: 0
+            datasourceUid: PBFA97CFB590B2093
+            model:
+              editorMode: code
+              expr: 100 * sum(jvm_memory_used_bytes{application="commerce-api",area="heap"}) / clamp_min(sum(jvm_memory_max_bytes{application="commerce-api",area="heap"}), 1)
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator:
+                    params:
+                      - 85
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    params: []
+                    type: last
+                  type: query
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
+        dashboardUid: commerce-runtime-health
+        panelId: 3
+        noDataState: NoData
+        execErrState: Error
+        for: 5m
+        labels:
+          severity: warning
+          service: commerce-api
+          category: jvm
+        annotations:
+          summary: JVM heap usage is above 85%
+          runbook: Check GC and memory pressure during load test.
+        isPaused: false

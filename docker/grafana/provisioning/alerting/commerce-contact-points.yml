@@ -1,0 +1,31 @@
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: commerce-webhook
+    receivers:
+      - uid: commerce-webhook-receiver
+        type: webhook
+        settings:
+          url: http://host.docker.internal:18080/grafana-alert
+          httpMethod: POST
+          maxAlerts: 0
+
+policies:
+  - orgId: 1
+    receiver: commerce-webhook
+    group_by:
+      - alertname
+      - service
+      - severity
+    routes:
+      - receiver: commerce-webhook
+        object_matchers:
+          - - severity
+            - =
+            - critical
+      - receiver: commerce-webhook
+        object_matchers:
+          - - service
+            - =
+            - commerce-api

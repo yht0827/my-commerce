@@ -5,12 +5,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.loopers.domain.brand.BrandId;
 import com.loopers.support.cache.CacheablePage;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorMessage;
@@ -29,6 +34,8 @@ public class ProductQueryService {
 	private final ProductRepository productRepository;
 	private final ProductCacheRepository productCacheRepository;
 	private final ProductCacheMetrics productCacheMetrics;
+	private final ConcurrentHashMap<String, CompletableFuture<Page<ProductInfo>>> listLoadInFlight = new ConcurrentHashMap<>();
+	private final ConcurrentHashMap<String, CompletableFuture<ProductInfo>> detailLoadInFlight = new ConcurrentHashMap<>();
 
 	public Page<ProductInfo> getProductList(final ProductData.GetProductList data) {
 		if (!isListCacheable(data.pageable())) {
@@ -53,7 +60,11 @@ public class ProductQueryService {
 				brandKey, data.pageable().getPageNumber(), data.pageable().getPageSize());
 		}
 
-		return loadProductListFromDatabaseAndCache(data);
+		return executeSingleFlight(
+			listLoadInFlight,
+			buildListLoadKey(data.brandId(), data.pageable()),
+			() -> loadProductListFromDatabaseAndCache(data)
+		);
 	}
 
 	public ProductInfo getProductDetail(final ProductId productId) {
@@ -66,7 +77,11 @@ public class ProductQueryService {
 
 		productCacheMetrics.recordCacheMiss();
 		log.debug("Product detail cache miss: productId={}", productId.getProductId());
-		return loadProductDetailFromDatabaseAndCache(productId);
+		return executeSingleFlight(
+			detailLoadInFlight,
+			buildDetailLoadKey(productId),
+			() -> loadProductDetailFromDatabaseAndCache(productId)
+		);
 	}
 
 	@Transactional(readOnly = true)
@@ -160,6 +175,52 @@ public class ProductQueryService {
 			uniqueById.putIfAbsent(productId.getProductId(), productId);
 		}
 		return List.copyOf(uniqueById.values());
+	}
+
+	private String buildListLoadKey(final BrandId brandId, final Pageable pageable) {
+		String brandKey = brandId == null ? "all" : String.valueOf(brandId.getBrandId());
+		return brandKey + ":" + pageable.getPageNumber() + ":" + pageable.getPageSize() + ":" + pageable.getSort();
+	}
+
+	private String buildDetailLoadKey(final ProductId productId) {
+		return String.valueOf(productId.getProductId());
+	}
+
+	private <T> T executeSingleFlight(
+		final ConcurrentHashMap<String, CompletableFuture<T>> inFlight,
+		final String key,
+		final Supplier<T> loader
+	) {
+		CompletableFuture<T> newFuture = new CompletableFuture<>();
+		CompletableFuture<T> existingFuture = inFlight.putIfAbsent(key, newFuture);
+
+		if (existingFuture != null) {
+			try {
+				return existingFuture.join();
+			} catch (CompletionException completionException) {
+				throw toRuntimeException(completionException.getCause() == null
+					? completionException
+					: completionException.getCause());
+			}
+		}
+
+		try {
+			T loaded = loader.get();
+			newFuture.complete(loaded);
+			return loaded;
+		} catch (Throwable throwable) {
+			newFuture.completeExceptionally(throwable);
+			throw toRuntimeException(throwable);
+		} finally {
+			inFlight.remove(key, newFuture);
+		}
+	}
+
+	private RuntimeException toRuntimeException(final Throwable throwable) {
+		if (throwable instanceof RuntimeException runtimeException) {
+			return runtimeException;
+		}
+		return new IllegalStateException(throwable);
 	}
 
 }

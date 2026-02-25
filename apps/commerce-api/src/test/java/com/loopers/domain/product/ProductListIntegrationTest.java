@@ -84,9 +84,9 @@ class ProductListIntegrationTest {
 		thirdProduct = saveProduct(primaryBrandId, "product-200", 200L, 10L);
 		saveProduct(secondaryBrandId, "other-brand-product", 50L, 10L);
 
-		saveAggregate(firstProduct, 5L);
-		saveAggregate(secondProduct, 1L);
-		saveAggregate(thirdProduct, 3L);
+		saveAggregate(firstProduct, 5L, 2L, 100L);
+		saveAggregate(secondProduct, 1L, 5L, 20L);
+		saveAggregate(thirdProduct, 3L, 3L, 300L);
 
 		clearInvocations(spyProductRepository);
 	}
@@ -142,6 +142,32 @@ class ProductListIntegrationTest {
 	}
 
 	@Test
+	@DisplayName("주문수 내림차순 정렬이 동작한다")
+	void getProductList_ordersDescOrdering() {
+		Page<ProductInfo> page = productRepository.getProductList(
+			primaryBrandId,
+			PageRequest.of(0, 3, Sort.by("orderCount").descending())
+		);
+
+		assertThat(page.getContent())
+			.extracting(ProductInfo::productId)
+			.containsExactly(secondProduct.getId(), thirdProduct.getId(), firstProduct.getId());
+	}
+
+	@Test
+	@DisplayName("조회수 내림차순 정렬이 동작한다")
+	void getProductList_viewsDescOrdering() {
+		Page<ProductInfo> page = productRepository.getProductList(
+			primaryBrandId,
+			PageRequest.of(0, 3, Sort.by("viewCount").descending())
+		);
+
+		assertThat(page.getContent())
+			.extracting(ProductInfo::productId)
+			.containsExactly(thirdProduct.getId(), firstProduct.getId(), secondProduct.getId());
+	}
+
+	@Test
 	@DisplayName("정렬이 다르면 별도 리스트 캐시를 사용한다")
 	void getProductList_usesDifferentCachePerSort() {
 		Pageable pricePageable = PageRequest.of(0, 3, Sort.by("price").ascending());
@@ -181,11 +207,13 @@ class ProductListIntegrationTest {
 		);
 	}
 
-	private void saveAggregate(final Product product, final Long likeCount) {
+	private void saveAggregate(final Product product, final Long likeCount, final Long orderCount, final Long viewCount) {
 		productAggregateJpaRepository.saveAndFlush(
 			ProductAggregate.builder()
 				.productId(ProductId.of(product.getId()))
 				.likeCount(new LikeCount(likeCount))
+				.orderCount(new OrderCount(orderCount))
+				.viewCount(new ViewCount(viewCount))
 				.build()
 		);
 	}

@@ -1,6 +1,6 @@
 # 시퀀스 다이어그램
 
-> API별 요청/응답 흐름을 시각화한 시퀀스 다이어그램
+> `apps/commerce-api` 현재 코드 기준 상세 흐름
 
 ## 목차
 
@@ -9,8 +9,9 @@
 - [상품 (Product)](#상품-product)
 - [브랜드 (Brand)](#브랜드-brand)
 - [좋아요 (Like)](#좋아요-like)
-- [쿠폰 (Coupon)](#쿠폰-coupon)
-- [주문 (Order)](#주문-order)
+- [주문/쿠폰 (Order/Coupon)](#주문쿠폰-ordercoupon)
+- [결제 (Payment)](#결제-payment)
+- [랭킹 (Ranking)](#랭킹-ranking)
 
 ---
 
@@ -25,47 +26,21 @@ sequenceDiagram
     autonumber
     actor User as 사용자
     participant Client as 클라이언트
-    participant Server as API 서버
+    participant API as UserV1Controller
+    participant App as UserApplicationService
+    participant Domain as UserService
     participant DB as Database
 
-    User->>Client: 회원정보 입력 (ID, 이메일, 생년월일, 성별)
-    Client->>Client: 입력값 유효성 검증
-
-    alt 유효성 검증 실패
-        Client-->>User: 입력 오류 메시지 표시
-    else 유효성 검증 성공
-        Client->>Server: POST /api/v1/users
-        Server->>Server: 요청 데이터 유효성 검증
-
-        alt 유효성 검증 실패
-            Server-->>Client: 400 Bad Request
-            Client-->>User: 오류 메시지 표시
-        else 유효성 검증 성공
-            Server->>DB: ID 중복 확인
-
-            alt ID 중복
-                DB-->>Server: 중복 ID 존재
-                Server-->>Client: 409 Conflict (ID 중복)
-                Client-->>User: "이미 사용 중인 ID입니다"
-            else ID 사용 가능
-                Server->>DB: 이메일 중복 확인
-
-                alt 이메일 중복
-                    DB-->>Server: 중복 이메일 존재
-                    Server-->>Client: 409 Conflict (이메일 중복)
-                    Client-->>User: "이미 사용 중인 이메일입니다"
-                else 이메일 사용 가능
-                    Server->>DB: 회원 정보 저장
-                    DB-->>Server: 저장 완료
-                    Server-->>Client: 201 Created (id, userId, email, birthday, gender, createdAt)
-                    Client-->>User: 회원가입 완료, 로그인 페이지로 이동
-                end
-            end
-        end
-    end
+    User->>Client: 회원정보 입력
+    Client->>API: POST /api/v1/users
+    API->>App: register(command)
+    App->>Domain: register(command)
+    Domain->>DB: userId/email 중복 검증
+    Domain->>DB: users INSERT
+    Domain-->>App: UserResult
+    App-->>API: UserResult
+    API-->>Client: 201 Created
 ```
-
----
 
 ### 내 정보 조회
 
@@ -76,30 +51,20 @@ sequenceDiagram
     autonumber
     actor User as 사용자
     participant Client as 클라이언트
-    participant Server as API 서버
+    participant API as UserV1Controller
+    participant Resolver as CurrentUserIdArgumentResolver
+    participant App as UserApplicationService
+    participant Domain as UserService
     participant DB as Database
 
     User->>Client: 마이페이지 접근
-    Client->>Server: GET /api/v1/users/me<br/>[Header: X-USER-ID]
-
-    Server->>Server: X-USER-ID 헤더 검증
-
-    alt 헤더 없음
-        Server-->>Client: 401 Unauthorized
-        Client-->>User: 로그인 필요 안내
-    else 헤더 존재
-        Server->>DB: 사용자 조회 (userId)
-
-        alt 사용자 미존재
-            DB-->>Server: 조회 결과 없음
-            Server-->>Client: 404 Not Found
-            Client-->>User: 회원 정보 없음 안내
-        else 사용자 존재
-            DB-->>Server: 사용자 정보
-            Server-->>Client: 200 OK (id, userId, email, birthday, gender, createdAt)
-            Client-->>User: 마이페이지 화면 표시
-        end
-    end
+    Client->>API: GET /api/v1/users/me (X-USER-ID)
+    API->>Resolver: @CurrentUserId resolve
+    Resolver-->>API: userId
+    API->>App: getUser(query)
+    App->>Domain: findByUserId
+    Domain->>DB: users SELECT
+    API-->>Client: 200 OK
 ```
 
 ---
@@ -114,37 +79,20 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     actor User as 사용자
-    participant Client as 클라이언트
-    participant Server as API 서버
+    participant API as PointV1Controller
+    participant App as PointApplicationService
+    participant Domain as PointService
+    participant Hist as PointHistoryRepository
     participant DB as Database
 
-    User->>Client: 충전 금액 입력
-    Client->>Server: POST /api/v1/points/charge<br/>[Header: X-USER-ID]<br/>{amount: 10000}
-
-    Server->>Server: X-USER-ID 헤더 검증
-
-    alt 인증 실패
-        Server-->>Client: 401 Unauthorized
-        Client-->>User: 로그인 필요 안내
-    else 인증 성공
-        Server->>Server: 충전 금액 유효성 검증
-
-        alt 금액 유효성 실패
-            Server-->>Client: 400 Bad Request
-            Client-->>User: "올바른 금액을 입력해주세요"
-        else 금액 유효
-            Server->>DB: 트랜잭션 시작
-            Server->>DB: 포인트 잔액 증가
-            Server->>DB: 충전 내역 저장
-            Server->>DB: 트랜잭션 커밋
-            DB-->>Server: 처리 완료
-            Server-->>Client: 200 OK (갱신된 포인트 정보)
-            Client-->>User: 충전 완료 표시
-        end
-    end
+    User->>API: 충전 요청 (X-USER-ID, balance)
+    API->>App: chargePoint(command)
+    App->>Domain: charge(userId, amount)
+    Domain->>DB: points SELECT
+    Domain->>DB: points UPDATE
+    Domain->>Hist: point_histories INSERT(CHARGE)
+    API-->>User: 200 OK
 ```
-
----
 
 ### 포인트 조회
 
@@ -154,25 +102,16 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     actor User as 사용자
-    participant Client as 클라이언트
-    participant Server as API 서버
+    participant API as PointV1Controller
+    participant App as PointApplicationService
+    participant Domain as PointService
     participant DB as Database
 
-    User->>Client: 포인트 내역 페이지 접근
-    Client->>Server: GET /api/v1/points<br/>[Header: X-USER-ID]
-
-    Server->>Server: X-USER-ID 헤더 검증
-
-    alt 인증 실패
-        Server-->>Client: 401 Unauthorized
-        Client-->>User: 로그인 필요 안내
-    else 인증 성공
-        Server->>DB: 포인트 잔액 조회
-        Server->>DB: 포인트 내역 조회 (최신순)
-        DB-->>Server: 포인트 정보
-        Server-->>Client: 200 OK (잔액, 충전/사용 내역)
-        Client-->>User: 포인트 정보 화면 표시
-    end
+    User->>API: 포인트 조회 (X-USER-ID)
+    API->>App: getPoint(query)
+    App->>Domain: findByUserId
+    Domain->>DB: points SELECT
+    API-->>User: 200 OK (잔액)
 ```
 
 ---
@@ -187,29 +126,23 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     actor User as 사용자
-    participant Client as 클라이언트
-    participant Server as API 서버
+    participant API as ProductV1Controller
+    participant App as ProductApplicationService
+    participant Query as ProductQueryService
+    participant Repo as ProductRepositoryImpl
     participant DB as Database
 
-    User->>Client: 상품 목록 페이지 접근
-    Client->>Server: GET /api/v1/products<br/>?brandId=1&sort=latest&page=0&size=20
-
-    Server->>Server: 쿼리 파라미터 검증
-
-    alt 잘못된 정렬 기준
-        Server-->>Client: 400 Bad Request
-        Client-->>User: 오류 메시지 표시
-    else 파라미터 유효
-        Server->>DB: 상품 목록 조회<br/>(필터, 정렬, 페이징 적용)
-        DB-->>Server: 상품 목록 + 페이징 정보
-        Server-->>Client: 200 OK (상품 목록, 페이징 정보)
-        Client-->>User: 상품 목록 화면 표시
-    end
+    User->>API: 목록 조회 (brandId, sort, page, size)
+    API->>App: getProductList(query)
+    App->>Query: getProductList(data)
+    Query->>Repo: getProductList(brandId, pageable)
+    Repo->>DB: products + brands + product_aggregate 조회
+    Note over Repo: sort가 잘못되어도 latest fallback
+    Repo-->>Query: Page<ProductInfo>
+    API-->>User: 200 OK
 ```
 
----
-
-### 상품 상세 조회
+### 상품 상세 조회 + 조회수 이벤트
 
 `GET /api/v1/products/{productId}`
 
@@ -217,29 +150,34 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     actor User as 사용자
-    participant Client as 클라이언트
-    participant Server as API 서버
+    participant API as ProductV1Controller
+    participant App as ProductApplicationService
+    participant Query as ProductQueryService
+    participant Rank as RankingQueryService
+    participant Event as EventPublisher
+    participant Counter as ProductCounterEventHandler
+    participant Hist as ProductCounterEventHistoryService
+    participant Agg as ProductAggregateService
+    participant Cache as ProductCacheInvalidationService
     participant DB as Database
 
-    User->>Client: 상품 클릭
-    Client->>Server: GET /api/v1/products/{productId}
+    User->>API: 상세 조회
+    API->>App: getProductDetail(productId)
+    App->>Query: getProductDetail(productId)
+    Query->>DB: products + brands + product_aggregate SELECT
+    App->>Rank: getProductRanking(productId)
+    App->>Event: publish(ProductViewedEvent)
+    API-->>User: 200 OK (like/order/view 포함)
 
-    Server->>DB: 상품 정보 조회
-
-    alt 상품 미존재
-        DB-->>Server: 조회 결과 없음
-        Server-->>Client: 404 Not Found
-        Client-->>User: "상품을 찾을 수 없습니다"
-    else 상품 존재
-        DB-->>Server: 상품 기본 정보
-        Server->>DB: 상품 옵션 조회
-        DB-->>Server: 옵션 정보
-        Server->>DB: 재고 정보 조회
-        DB-->>Server: 재고 정보
-        Server->>DB: 좋아요 수 조회
-        DB-->>Server: 좋아요 수
-        Server-->>Client: 200 OK (상품 상세 정보)
-        Client-->>User: 상품 상세 화면 표시
+    Event-->>Counter: ProductViewedEvent (AFTER_COMMIT, Async)
+    Counter->>Hist: claim(dedupeKey)
+    alt duplicate
+        Counter-->>Counter: skip
+    else new event
+        Counter->>Hist: markProcessing
+        Counter->>Agg: incrementViewCount
+        Counter->>Cache: evictProductCache
+        Counter->>Hist: complete
     end
 ```
 
@@ -255,26 +193,16 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     actor User as 사용자
-    participant Client as 클라이언트
-    participant Server as API 서버
+    participant API as BrandV1Controller
+    participant App as BrandApplicationService
+    participant Domain as BrandService
     participant DB as Database
 
-    User->>Client: 브랜드 페이지 접근
-    Client->>Server: GET /api/v1/brands/{brandId}
-
-    Server->>DB: 브랜드 정보 조회
-
-    alt 브랜드 미존재
-        DB-->>Server: 조회 결과 없음
-        Server-->>Client: 404 Not Found
-        Client-->>User: "브랜드를 찾을 수 없습니다"
-    else 브랜드 존재
-        DB-->>Server: 브랜드 정보
-        Server->>DB: 브랜드 상품 목록 조회
-        DB-->>Server: 상품 목록
-        Server-->>Client: 200 OK (브랜드 정보, 상품 목록)
-        Client-->>User: 브랜드 상세 화면 표시
-    end
+    User->>API: 브랜드 상세 조회
+    API->>App: getBrandById(query)
+    App->>Domain: getBrandById(data)
+    Domain->>DB: brands SELECT
+    API-->>User: 200 OK
 ```
 
 ---
@@ -289,44 +217,30 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     actor User as 사용자
-    participant Client as 클라이언트
-    participant Controller as LikeV1Controller
-    participant Facade as LikeFacade
-    participant Service as LikeService
-    participant Repository as LikeRepository
+    participant API as LikeV1Controller
+    participant App as LikeApplicationService
+    participant Domain as LikeService
+    participant Repo as LikeRepository
+    participant Event as EventPublisher
+    participant Handler as LikeEventHandler
     participant DB as Database
-    participant EventBus as EventPublisher
-    participant Kafka as LikeEventPublisher
 
-    User->>Client: 좋아요 버튼 클릭
-    Client->>Controller: POST /api/v1/like/products/{productId}<br/>[Header: X-USER-ID]
-    Controller->>Controller: LikeCommand.LikeProduct 생성
-    Controller->>Facade: likeProduct(command)
-    Facade->>Service: likeProduct(command.toData())
-    Service->>Repository: findByUserIdAndProductId(userId, productId)
-    Repository->>DB: SELECT likes by user_id + product_id
-
-    alt 이미 좋아요 존재
-        DB-->>Repository: row 반환
-        Repository-->>Service: Optional.of(Like)
-        Service-->>Facade: CoreException(BAD_REQUEST)
-        Facade-->>Controller: 예외 전파
-        Controller-->>Client: 400 Bad Request
-    else 좋아요 없음
-        DB-->>Repository: empty
-        Service->>Repository: save(Like.create(userId, productId))
-        Repository->>DB: INSERT INTO likes
-        DB-->>Repository: saved like
-        Repository-->>Service: Like
-        Service-->>Facade: LikeInfo
-        Facade->>EventBus: publish(ProductLikedEvent)
-        Facade->>Kafka: publishLike(userId, productId)
-        Facade-->>Controller: LikeResult
-        Controller-->>Client: 200 OK
+    User->>API: 좋아요 등록 (header: userId)
+    API->>App: likeProduct(command)
+    App->>Domain: likeProduct(data)
+    Domain->>Repo: findByUserIdAndProductId
+    alt already exists
+        Domain-->>API: 400 BAD_REQUEST
+    else not exists
+        Domain->>Repo: save(Like)
+        App->>Event: publish(ProductLikedEvent)
+        API-->>User: 200 OK
     end
-```
 
----
+    Event-->>Handler: ProductLikedEvent
+    Handler->>DB: product_counter_event_history claim/process/complete
+    Handler->>DB: product_aggregate.like_count +1
+```
 
 ### 좋아요 취소
 
@@ -336,80 +250,35 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     actor User as 사용자
-    participant Client as 클라이언트
-    participant Controller as LikeV1Controller
-    participant Facade as LikeFacade
-    participant Service as LikeService
-    participant Repository as LikeRepository
-    participant DB as Database
-    participant EventBus as EventPublisher
-    participant Kafka as LikeEventPublisher
+    participant API as LikeV1Controller
+    participant App as LikeApplicationService
+    participant Domain as LikeService
+    participant Repo as LikeRepository
+    participant Event as EventPublisher
+    participant Handler as LikeEventHandler
 
-    User->>Client: 좋아요 버튼 클릭 (취소)
-    Client->>Controller: DELETE /api/v1/like/products/{productId}<br/>[Header: X-USER-ID]
-    Controller->>Controller: LikeCommand.UnlikeProduct 생성
-    Controller->>Facade: unlikeProduct(command)
-    Facade->>Service: unlikeProduct(command.toData())
-    Service->>Repository: findByUserIdAndProductId(userId, productId)
-    Repository->>DB: SELECT likes by user_id + product_id
-
-    alt 좋아요 미존재
-        DB-->>Repository: empty
-        Repository-->>Service: Optional.empty
-        Service-->>Facade: CoreException(NOT_FOUND)
-        Facade-->>Controller: 예외 전파
-        Controller-->>Client: 404 Not Found
-    else 좋아요 존재
-        DB-->>Repository: row 반환
-        Repository-->>Service: Optional.of(Like)
-        Service->>Repository: delete(like)
-        Repository->>DB: DELETE FROM likes
-        DB-->>Repository: deleted
-        Service-->>Facade: success
-        Facade->>EventBus: publish(ProductUnLikedEvent)
-        Facade->>Kafka: publishUnlike(userId, productId)
-        Facade-->>Controller: success
-        Controller-->>Client: 200 OK
+    User->>API: 좋아요 취소 (header: userId)
+    API->>App: unlikeProduct(command)
+    App->>Domain: unlikeProduct(data)
+    Domain->>Repo: findByUserIdAndProductId
+    alt not found
+        Domain-->>API: 404 NOT_FOUND
+    else found
+        Domain->>Repo: delete
+        App->>Event: publish(ProductUnLikedEvent)
+        API-->>User: 200 OK
     end
+
+    Event-->>Handler: ProductUnLikedEvent
+    Handler->>Handler: dedupe claim
+    Handler->>Handler: like_count decrement
 ```
 
 ---
 
-### 좋아요 목록 조회
+## 주문/쿠폰 (Order/Coupon)
 
-`GET /api/v1/like/products`
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as 사용자
-    participant Client as 클라이언트
-    participant Controller as LikeV1Controller
-    participant Facade as LikeFacade
-    participant Service as LikeService
-    participant Repository as LikeRepository
-    participant DB as Database
-
-    User->>Client: 좋아요 목록 페이지 접근
-    Client->>Controller: GET /api/v1/like/products<br/>[Header: X-USER-ID]
-    Controller->>Controller: LikeQuery.GetLikedProducts 생성
-    Controller->>Facade: getLikedProductList(query)
-    Facade->>Service: getLikedProductList(query.toData())
-    Service->>Repository: findAllByUserId(userId)
-    Repository->>DB: SELECT likes by user_id
-    DB-->>Repository: like rows
-    Repository-->>Service: List<Like>
-    Service-->>Facade: List<LikeInfo>
-    Facade-->>Controller: List<LikeResult>
-    Controller-->>Client: 200 OK (상품 목록)
-    Client-->>User: 좋아요 목록 화면 표시
-```
-
----
-
-## 쿠폰 (Coupon)
-
-### 주문 시 쿠폰 적용
+### 주문 생성 (동기 처리 + 멱등성 + outbox)
 
 `POST /api/v1/orders`
 
@@ -417,204 +286,188 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     actor User as 사용자
-    participant Client as 클라이언트
-    participant Server as API 서버
+    participant API as OrderV1Controller
+    participant App as OrderApplicationService
+    participant Hist as OrderHistoryRepository
+    participant Proc as OrderProcessor
+    participant Stock as ProductStockService
+    participant Coupon as CouponService
+    participant Point as PointService
+    participant Order as OrderService
+    participant Outbox as OutboxService
     participant DB as Database
 
-    User->>Client: 주문 화면에서 쿠폰 선택 (선택사항)
-    Client->>Server: POST /api/v1/orders<br/>[Header: X-USER-ID]<br/>{items, couponId, cardType, cardNo, callbackUrl}
+    User->>API: 주문 요청 (X-USER-ID, X-IDEMPOTENCY-KEY optional)
+    API->>App: createOrder(command)
 
-    alt couponId 없음
-        Server->>Server: 쿠폰 할인 0원 처리
-    else couponId 있음
-        Server->>DB: 쿠폰 조회 (PESSIMISTIC WRITE LOCK)
-
-        alt 쿠폰 미존재
-            DB-->>Server: 조회 결과 없음
-            Server-->>Client: 404 Not Found
-            Client-->>User: "쿠폰이 존재하지 않습니다"
-        else 쿠폰 존재
-            Server->>Server: 쿠폰 사용 여부 검증
-
-            alt 이미 사용됨
-                Server-->>Client: 400 Bad Request
-                Client-->>User: "이미 사용된 쿠폰입니다"
-            else 사용 가능
-                Server->>Server: 할인 금액 계산
-                Server->>DB: 쿠폰 상태 USED / used_at 갱신
-                DB-->>Server: 갱신 완료
+    alt idempotency key exists
+        App->>Hist: createIfNotExists(userId,key)
+        alt claim fail
+            App->>Hist: findByUserIdAndIdempotencyKey
+            alt completed
+                App->>Order: getOrder(userId, orderId)
+                App-->>API: 기존 주문 반환
+            else in progress
+                App-->>API: 409 CONFLICT
             end
+        else claim success
+            App->>Proc: process(command)
         end
+    else no key
+        App->>Proc: process(command)
     end
 
-    Server->>DB: 주문/주문상품 저장
-    DB-->>Server: 저장 완료
-    Server-->>Client: 201 Created
-    Client-->>User: 주문 완료 화면 표시
+    Proc->>Stock: deductStock (product row lock)
+    Proc->>Coupon: applyDiscount (coupon row lock, optional)
+    Proc->>Point: use (point row lock)
+    Proc->>Order: createOrder + orderItems 저장
+
+    App->>Outbox: enqueue(PAYMENT_REQUEST)
+    App->>Outbox: enqueue(DATA_PLATFORM_DISPATCH: ORDER_CREATED)
+    API-->>User: 200 OK
 ```
 
-#### 쿠폰 처리 SQL 예시
-
-```sql
-SELECT id, coupon_status, discount_value, max_discount_amount, coupon_type
-FROM coupons
-WHERE id = :couponId
-FOR UPDATE;
-
-UPDATE coupons
-SET coupon_status = 'USED',
-    used_at = NOW(6),
-    version = version + 1,
-    updated_at = NOW(6)
-WHERE id = :couponId;
-```
-
----
-
-## 주문 (Order)
-
-### 주문 생성
-
-`POST /api/v1/orders`
+### Outbox 디스패치
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as 사용자
-    participant Client as 클라이언트
-    participant Server as API 서버
-    participant DB as Database
-    participant External as 외부 시스템
+    participant Sch as OutboxEventScheduler
+    participant Disp as OutboxDispatcherService
+    participant O as OutboxService
+    participant PayProc as PaymentProcessor
+    participant PayOut as PaymentResultOutboxService
+    participant Ord as OrderService
+    participant Platform as DataPlatformApplicationService
 
-    User->>Client: 주문하기 버튼 클릭
-    Client->>Server: POST /api/v1/orders<br/>[Header: X-USER-ID]<br/>{items: [{productId, quantity}]}
-
-    Server->>Server: X-USER-ID 헤더 검증
-
-    alt 인증 실패
-        Server-->>Client: 401 Unauthorized
-        Client-->>User: 로그인 필요 안내
-    else 인증 성공
-        Server->>Server: 요청 데이터 검증<br/>(상품 개수 50개 이하)
-
-        alt 검증 실패
-            Server-->>Client: 400 Bad Request
-            Client-->>User: 오류 메시지 표시
-        else 검증 성공
-            Server->>DB: 트랜잭션 시작
-            Server->>DB: 회원 정보 조회
-
-            loop 각 주문 상품
-                Server->>DB: 상품 정보 조회
-
-                alt 상품 미존재 or 판매중 아님
-                    Server->>DB: 트랜잭션 롤백
-                    Server-->>Client: 400 Bad Request
-                    Client-->>User: 오류 메시지 표시
-                else 상품 유효
-                    Server->>DB: 재고 확인 및 차감 (Lock)
-
-                    alt 재고 부족
-                        Server->>DB: 트랜잭션 롤백
-                        Server-->>Client: 400 Bad Request
-                        Client-->>User: "재고가 부족합니다"
-                    end
-                end
-            end
-
-            Server->>DB: 총 금액 계산
-            Server->>DB: 포인트 잔액 확인
-
-            alt 포인트 부족
-                Server->>DB: 트랜잭션 롤백
-                Server-->>Client: 400 Bad Request
-                Client-->>User: "포인트가 부족합니다"
-            else 포인트 충분
-                Server->>DB: 포인트 차감
-                Server->>DB: 주문 정보 저장
-                Server->>DB: 주문 상품 저장
-                Server->>DB: 트랜잭션 커밋
-                Server-->>External: 주문 정보 전송 (비동기)
-                Server-->>Client: 201 Created (주문 정보)
-                Client-->>User: 주문 완료 화면 표시
-            end
+    Sch->>Disp: dispatchPendingEvents()
+    Disp->>O: findPendingEventIds(batch)
+    loop each id
+        Disp->>O: claim(id)
+        alt PAYMENT_REQUEST
+            Disp->>PayProc: process()
+            Disp->>PayOut: enqueueByPaymentStatus()
+        else ORDER_STATUS_SYNC
+            Disp->>Ord: updateOrderStatus()
+        else DATA_PLATFORM_DISPATCH
+            Disp->>Platform: sendEventWithFailure()
+        end
+        alt success
+            Disp->>O: complete(id)
+        else fail
+            Disp->>O: retry(id,error)
         end
     end
 ```
 
 ---
 
-### 주문 목록 조회
+## 결제 (Payment)
 
-`GET /api/v1/orders`
+### 주문 생성 이벤트 기반 결제 요청
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as 사용자
-    participant Client as 클라이언트
-    participant Server as API 서버
-    participant DB as Database
+    participant Event as EventPublisher
+    participant PEH as PaymentEventHandler
+    participant App as PaymentApplicationService
+    participant Proc as PaymentProcessor
+    participant PaySvc as PaymentService
+    participant Gateway as PaymentGatewayService
 
-    User->>Client: 주문 내역 페이지 접근
-    Client->>Server: GET /api/v1/orders<br/>[Header: X-USER-ID]
+    Event-->>PEH: OrderCreatedEvent
+    PEH->>App: processOrderPayment(orderEvent)
+    App->>Proc: process(createPaymentCommand)
+    Proc->>PaySvc: createPayment
+    Proc->>Gateway: requestPaymentGateway
+    Proc->>PaySvc: updatePaymentStatus
 
-    Server->>Server: X-USER-ID 헤더 검증
+    alt SUCCESS
+        PEH->>Event: publish(PaymentCompletedEvent)
+    else FAILED
+        PEH->>Event: publish(PaymentFailedEvent)
+    end
+```
 
-    alt 인증 실패
-        Server-->>Client: 401 Unauthorized
-        Client-->>User: 로그인 필요 안내
-    else 인증 성공
-        Server->>DB: 주문 목록 조회 (최신순)
-        DB-->>Server: 주문 목록
-        Server-->>Client: 200 OK (주문 목록)
-        Client-->>User: 주문 내역 화면 표시
+### 결제 콜백 접수/비동기 처리
+
+`POST /api/v1/payments/callback`
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor PG as PG
+    participant API as PaymentV1Controller
+    participant App as PaymentApplicationService
+    participant Sig as PaymentCallbackSignatureVerifier
+    participant Hist as PaymentCallbackHistoryService
+    participant Async as PaymentCallbackAsyncProcessor
+    participant PaySvc as PaymentService
+    participant Gate as PaymentGatewayService
+    participant Out as PaymentResultOutboxService
+
+    PG->>API: callback(rawBody + X-CALLBACK-*)
+    API->>App: acceptCallback(command)
+    App->>Sig: verify(command)
+    App->>Hist: claim(dedupeKey)
+
+    alt duplicate
+        App-->>API: accepted=false
+        API-->>PG: 200 OK (중복 메시지)
+    else accepted
+        App->>Async: process(dedupeKey, command)
+        API-->>PG: 200 OK (접수 완료)
+
+        Async->>Hist: markProcessing
+        Async->>PaySvc: processCallback
+        PaySvc->>Gate: processCallbackWithVerification
+        Async->>Out: enqueueByPaymentStatus
+        Async->>Hist: complete/fail
+    end
+```
+
+### 결제 상태 재검증 스케줄러
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Sch as PaymentVerificationScheduler
+    participant Gate as PaymentGatewayService
+    participant Out as PaymentResultOutboxService
+
+    Sch->>Gate: verifyPendingPayments()
+    Gate-->>Sch: terminal transitions
+    loop each payment
+        Sch->>Out: enqueueByPaymentStatus(orderId,status)
     end
 ```
 
 ---
 
-### 주문 상세 조회
+## 랭킹 (Ranking)
 
-`GET /api/v1/orders/{orderId}`
+### 랭킹 조회
+
+`GET /api/v1/rankings`
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor User as 사용자
-    participant Client as 클라이언트
-    participant Server as API 서버
-    participant DB as Database
+    participant API as RankingV1Controller
+    participant App as RankingApplicationService
+    participant Domain as RankingQueryService
+    participant Redis as RedisRankingRepository
+    participant DB as RankingSnapshotRepository
 
-    User->>Client: 주문 상세 클릭
-    Client->>Server: GET /api/v1/orders/{orderId}<br/>[Header: X-USER-ID]
-
-    Server->>Server: X-USER-ID 헤더 검증
-
-    alt 인증 실패
-        Server-->>Client: 401 Unauthorized
-        Client-->>User: 로그인 필요 안내
-    else 인증 성공
-        Server->>DB: 주문 정보 조회
-
-        alt 주문 미존재
-            DB-->>Server: 조회 결과 없음
-            Server-->>Client: 404 Not Found
-            Client-->>User: "주문을 찾을 수 없습니다"
-        else 주문 존재
-            Server->>Server: 본인 주문 여부 확인
-
-            alt 본인 주문 아님
-                Server-->>Client: 403 Forbidden
-                Client-->>User: "접근 권한이 없습니다"
-            else 본인 주문
-                Server->>DB: 주문 상품 목록 조회
-                DB-->>Server: 주문 상품 목록
-                Server->>DB: 결제 정보 조회
-                DB-->>Server: 결제 정보
-                Server-->>Client: 200 OK (주문 상세 정보)
-                Client-->>User: 주문 상세 화면 표시
-            end
-        end
+    User->>API: 랭킹 조회 (X-USER-ID, date/type/page/size)
+    API->>App: getRanking(query)
+    App->>Domain: getRankingPage(data)
+    alt redis available
+        Domain->>Redis: read ranking slice
+    else snapshot fallback
+        Domain->>DB: read ranking snapshot
     end
+    API-->>User: 200 OK
 ```

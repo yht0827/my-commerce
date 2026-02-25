@@ -6,6 +6,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.loopers.domain.order.event.OrderCreatedEvent;
+import com.loopers.domain.payment.TransactionStatus;
 import com.loopers.domain.payment.event.PaymentCompletedEvent;
 import com.loopers.domain.payment.event.PaymentFailedEvent;
 import com.loopers.domain.platform.event.DataPlatformEvent;
@@ -22,7 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class PaymentEventHandler {
 
-	private final PaymentProcessor paymentProcessor;
+	private final PaymentApplicationService paymentApplicationService;
 	private final EventPublisher eventPublisher;
 
 	@Async
@@ -33,17 +34,28 @@ public class PaymentEventHandler {
 		}
 
 		OrderCreatedEvent orderEvent = event.getPayload();
-		PaymentResult result = paymentProcessor.processOrderPayment(orderEvent);
+		PaymentResult result = paymentApplicationService.processOrderPayment(orderEvent);
 
 		handlePaymentResult(result);
 	}
 
 	void handlePaymentResult(PaymentResult result) {
 		switch (result) {
-			case PaymentResult.Success success -> handleSuccess(success);
+			case PaymentResult.Success success -> handleSuccessByStatus(success);
 			case PaymentResult.Failure failure -> handleFailure(failure);
 			default -> throw new CoreException(ErrorType.NOT_FOUND, "예상하지 못한 오류가 발생 하였습니다.");
 		}
+	}
+
+	void handleSuccessByStatus(PaymentResult.Success success) {
+		TransactionStatus status = success.paymentInfo().status();
+		if (status == TransactionStatus.SUCCESS) {
+			handleSuccess(success);
+			return;
+		}
+
+		log.info("결제 요청 처리 결과가 터미널 성공 상태가 아니므로 완료 이벤트 발행을 건너뜁니다. orderId: {}, status: {}",
+			success.paymentInfo().orderId(), status);
 	}
 
 	void handleSuccess(PaymentResult.Success success) {

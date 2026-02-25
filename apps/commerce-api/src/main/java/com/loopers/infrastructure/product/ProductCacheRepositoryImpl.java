@@ -37,10 +37,11 @@ public class ProductCacheRepositoryImpl implements ProductCacheRepository {
 
 	private final RedisTemplate<String, Object> redisTemplate;
 	private final ObjectMapper objectMapper;
+	private final ProductCacheKeys productCacheKeys;
 
 	@Override
 	public Optional<CacheablePage<ProductInfo>> findProductList(final BrandId brandId, final Pageable pageable) {
-		String cacheKey = ProductCacheKeys.buildProductListKey(brandId, pageable);
+		String cacheKey = productCacheKeys.buildProductListKey(brandId, pageable);
 		Object cached = redisTemplate.opsForValue().get(cacheKey);
 		if (cached == null) {
 			return Optional.empty();
@@ -50,14 +51,14 @@ public class ProductCacheRepositoryImpl implements ProductCacheRepository {
 
 	@Override
 	public void saveProductList(final BrandId brandId, final Pageable pageable, final CacheablePage<ProductInfo> productList) {
-		String cacheKey = ProductCacheKeys.buildProductListKey(brandId, pageable);
+		String cacheKey = productCacheKeys.buildProductListKey(brandId, pageable);
 		redisTemplate.opsForValue().set(cacheKey, productList,
 			generateTtlWithJitter(PRODUCT_LIST_TTL_SECONDS, PRODUCT_LIST_TTL_JITTER_SECONDS));
 	}
 
 	@Override
 	public Optional<ProductInfo> findProductDetail(final ProductId productId) {
-		String cacheKey = ProductCacheKeys.buildProductDetailKey(productId);
+		String cacheKey = productCacheKeys.buildProductDetailKey(productId);
 		Object cached = redisTemplate.opsForValue().get(cacheKey);
 		if (cached instanceof ProductInfo productInfo) {
 			return Optional.of(productInfo);
@@ -67,7 +68,7 @@ public class ProductCacheRepositoryImpl implements ProductCacheRepository {
 
 	@Override
 	public void saveProductDetail(final ProductId productId, final ProductInfo productInfo) {
-		String cacheKey = ProductCacheKeys.buildProductDetailKey(productId);
+		String cacheKey = productCacheKeys.buildProductDetailKey(productId);
 		redisTemplate.opsForValue().set(cacheKey, productInfo,
 			generateTtlWithJitter(PRODUCT_DETAIL_TTL_SECONDS, PRODUCT_DETAIL_TTL_JITTER_SECONDS));
 	}
@@ -78,7 +79,7 @@ public class ProductCacheRepositoryImpl implements ProductCacheRepository {
 			return Map.of();
 		}
 
-		List<String> cacheKeys = productIds.stream().map(ProductCacheKeys::buildProductDetailKey).toList();
+		List<String> cacheKeys = productIds.stream().map(productCacheKeys::buildProductDetailKey).toList();
 		List<Object> cachedValues = redisTemplate.opsForValue().multiGet(cacheKeys);
 		if (cachedValues == null || cachedValues.isEmpty()) {
 			return Map.of();
@@ -107,14 +108,14 @@ public class ProductCacheRepositoryImpl implements ProductCacheRepository {
 
 	@Override
 	public void evictProductDetail(final ProductId productId) {
-		redisTemplate.delete(ProductCacheKeys.buildProductDetailKey(productId));
+		redisTemplate.delete(productCacheKeys.buildProductDetailKey(productId));
 	}
 
 	@Override
 	public void evictProductList() {
 		RedisScanBatchEvictor.evictByPattern(
 			redisTemplate,
-			ProductCacheKeys.buildProductListPattern(),
+			productCacheKeys.buildProductListPattern(),
 			PRODUCT_LIST_EVICT_FAILURE_MESSAGE
 		);
 	}

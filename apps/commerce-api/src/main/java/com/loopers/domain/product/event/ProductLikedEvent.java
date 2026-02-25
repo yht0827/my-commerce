@@ -31,7 +31,7 @@ public record ProductLikedEvent(
 
 	@Override
 	public String getCorrelationId() {
-		return "";
+		return EVENT_TYPE + ":" + userId + ":" + productId + ":" + occurredAt;
 	}
 
 	public String getUserId() {

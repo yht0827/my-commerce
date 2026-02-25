@@ -52,4 +52,9 @@ public class LikeRepositoryImpl implements LikeRepository {
 		return likeJpaRepository.findByUserIdAndProductIdWithOptimisticLock(userId, productId);
 	}
 
+	@Override
+	public long countByProductId(final ProductId productId) {
+		return likeJpaRepository.countByProductId(productId.getProductId());
+	}
+
 }

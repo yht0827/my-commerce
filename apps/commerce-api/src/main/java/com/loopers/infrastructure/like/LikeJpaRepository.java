@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.loopers.domain.like.Like;
 import com.loopers.domain.product.ProductId;
@@ -29,4 +30,7 @@ public interface LikeJpaRepository extends JpaRepository<Like, Long> {
 	@Lock(LockModeType.OPTIMISTIC)
 	@Query("SELECT l FROM Like l WHERE l.userId = :userId AND l.productId = :productId")
 	Optional<Like> findByUserIdAndProductIdWithOptimisticLock(final UserId userId, final ProductId productId);
+
+	@Query("SELECT COUNT(l) FROM Like l WHERE l.productId.productId = :productId")
+	long countByProductId(@Param("productId") Long productId);
 }

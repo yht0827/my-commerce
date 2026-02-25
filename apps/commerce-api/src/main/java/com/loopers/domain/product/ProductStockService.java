@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import com.loopers.domain.common.Quantity;
-import com.loopers.domain.order.OrderItem;
+import com.loopers.domain.order.OrderData;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorMessage;
 import com.loopers.support.error.ErrorType;
@@ -24,7 +24,7 @@ public class ProductStockService {
 	private final ProductRepository productRepository;
 
 	@Transactional
-	public List<ProductData.StockQuantityChanged> deductStock(final List<OrderItem> orderItems) {
+	public List<ProductData.StockQuantityChanged> deductStock(final List<OrderData.OrderItemData> orderItems) {
 		if (orderItems == null || orderItems.isEmpty()) {
 			return List.of();
 		}
@@ -57,19 +57,19 @@ public class ProductStockService {
 				() -> new CoreException(ErrorType.NOT_FOUND, ErrorMessage.PRODUCT_NOT_FOUND.format(productId.getProductId())));
 	}
 
-	private List<StockDeductionItem> normalizeOrderItemsForStockDeduction(final List<OrderItem> orderItems) {
+	private List<StockDeductionItem> normalizeOrderItemsForStockDeduction(final List<OrderData.OrderItemData> orderItems) {
 		Map<Long, StockDeductionItem> mergedItemsByProductId = new HashMap<>();
 
-		for (OrderItem orderItem : orderItems) {
-			if (orderItem == null || orderItem.getProductId() == null || orderItem.getQuantity() == null) {
+		for (OrderData.OrderItemData orderItem : orderItems) {
+			if (orderItem == null || orderItem.productId() == null || orderItem.quantity() == null) {
 				continue;
 			}
 
-			Long productId = orderItem.getProductId().getProductId();
-			StockDeductionItem newItem = new StockDeductionItem(orderItem.getProductId(), orderItem.getQuantity());
+			ProductId productId = ProductId.of(orderItem.productId());
+			StockDeductionItem newItem = new StockDeductionItem(productId, new Quantity(orderItem.quantity()));
 
 			mergedItemsByProductId.merge(
-				productId,
+				productId.getProductId(),
 				newItem,
 				(existingItem, incomingItem) -> new StockDeductionItem(
 					existingItem.productId(),

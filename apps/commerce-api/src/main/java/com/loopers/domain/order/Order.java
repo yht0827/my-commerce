@@ -1,5 +1,7 @@
 package com.loopers.domain.order;
 
+import java.util.UUID;
+
 import com.loopers.domain.BaseEntity;
 import com.loopers.domain.user.UserId;
 import com.loopers.support.error.CoreException;
@@ -62,13 +64,25 @@ public class Order extends BaseEntity {
 			.totalOrderPrice(totalOrderPrice)
 			.couponDiscountAmount(couponDiscountAmount)
 			.finalPaymentAmount(finalPaymentAmount)
+			.orderNumber(generateOrderNumber())
 			.status(OrderStatus.PENDING)
 			.build();
 	}
 
+	private static OrderNumber generateOrderNumber() {
+		return new OrderNumber("ORD-" + UUID.randomUUID());
+	}
+
 	public void updateOrderStatus(OrderStatus newStatus) {
+		if (status == newStatus) {
+			return;
+		}
+
 		if (status == OrderStatus.CONFIRMED) {
 			throw new CoreException(ErrorType.BAD_REQUEST, "이미 완료된 주문은 변경할 수 없습니다.");
+		}
+		if (status == OrderStatus.CANCELLED) {
+			throw new CoreException(ErrorType.BAD_REQUEST, "취소된 주문은 변경할 수 없습니다.");
 		}
 
 		this.status = newStatus;

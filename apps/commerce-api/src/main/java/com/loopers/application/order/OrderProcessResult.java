@@ -7,6 +7,7 @@ import com.loopers.domain.product.ProductData;
 
 public record OrderProcessResult(
 	OrderInfo orderInfo,
-	List<ProductData.StockQuantityChanged> quantityChanges
+	List<ProductData.StockQuantityChanged> quantityChanges,
+	Long finalPaymentAmount
 ) {
 }

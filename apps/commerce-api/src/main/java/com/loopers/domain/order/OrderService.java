@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.loopers.domain.BaseEntity;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
@@ -30,7 +29,16 @@ public class OrderService {
 
 		Order order = Order.create(data, totalOrderPrice, couponDiscountAmount);
 		Order savedOrder = orderRepository.save(order);
-		List<OrderItem> orderItemList = orderItemRepository.saveAll(orderItems);
+		OrderId orderId = new OrderId(savedOrder.getOrderNumber().getOrderNumber());
+		List<OrderItem> orderItemsWithOrderId = orderItems.stream()
+			.map(orderItem -> OrderItem.builder()
+				.orderId(orderId)
+				.productId(orderItem.getProductId())
+				.quantity(orderItem.getQuantity())
+				.price(orderItem.getPrice())
+				.build())
+			.toList();
+		List<OrderItem> orderItemList = orderItemRepository.saveAll(orderItemsWithOrderId);
 
 		return OrderInfo.from(savedOrder, orderItemList);
 	}
@@ -44,27 +52,34 @@ public class OrderService {
 		}
 
 		List<String> orderIds = orderList.stream()
-			.map(order -> order.getId().toString())
+			.map(order -> order.getOrderNumber().getOrderNumber())
 			.toList();
 
 		List<OrderItem> allOrderItems = orderItemRepository.findAllByOrderIdIn(orderIds);
 
-		Map<Long, List<OrderItem>> orderItemMap = allOrderItems.stream().collect(Collectors.groupingBy(BaseEntity::getId));
+		Map<String, List<OrderItem>> orderItemMap = allOrderItems.stream()
+			.collect(Collectors.groupingBy(orderItem -> orderItem.getOrderId().getOrderId()));
 
 		return orderList.stream().map(order -> {
-			List<OrderItem> orderItems = orderItemMap.getOrDefault(order.getId(), Collections.emptyList());
+			List<OrderItem> orderItems = orderItemMap.getOrDefault(order.getOrderNumber().getOrderNumber(),
+				Collections.emptyList());
 			return OrderInfo.from(order, orderItems);
 		}).collect(Collectors.toList());
 	}
 
 	@Transactional(readOnly = true)
 	public OrderInfo getOrder(final OrderData.GetOrder data) {
-		Order order = orderRepository.findByIdAndUserId(data.orderId(), data.userId())
+		Order order = orderRepository.findByOrderNumberAndUserId(data.orderId(), data.userId())
 			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "주문을 찾을 수 없습니다."));
 
 		List<OrderItem> orderItems = orderItemRepository.findAllByOrderId(order.getOrderNumber().getOrderNumber());
 
 		return OrderInfo.from(order, orderItems);
+	}
+
+	@Transactional(readOnly = true)
+	public List<OrderItem> getOrderItems(final String orderId) {
+		return orderItemRepository.findAllByOrderId(orderId);
 	}
 
 	@Transactional

@@ -52,4 +52,13 @@ public class PointHistory extends BaseEntity {
 			.description("포인트 충전")
 			.build();
 	}
+
+	public static PointHistory use(final UserId userId, final Balance amount) {
+		return PointHistory.create()
+			.userId(userId)
+			.amount(amount)
+			.type(PointHistoryType.USE)
+			.description("포인트 사용")
+			.build();
+	}
 }

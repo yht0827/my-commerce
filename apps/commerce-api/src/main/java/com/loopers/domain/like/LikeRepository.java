@@ -22,4 +22,6 @@ public interface LikeRepository {
 
 	Optional<Like> findByUserIdAndProductIdWithOptimisticLock(final UserId userId, final ProductId productId);
 
+	long countByProductId(final ProductId productId);
+
 }

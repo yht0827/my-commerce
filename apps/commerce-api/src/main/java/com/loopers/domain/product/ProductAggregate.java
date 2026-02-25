@@ -22,10 +22,18 @@ public class ProductAggregate extends BaseEntity {
 	@Embedded
 	private LikeCount likeCount;
 
+	@Embedded
+	private OrderCount orderCount;
+
+	@Embedded
+	private ViewCount viewCount;
+
 	@Builder
-	public ProductAggregate(ProductId productId, LikeCount likeCount) {
+	public ProductAggregate(ProductId productId, LikeCount likeCount, OrderCount orderCount, ViewCount viewCount) {
 		this.productId = productId;
-		this.likeCount = likeCount;
+		this.likeCount = likeCount != null ? likeCount : LikeCount.Zero();
+		this.orderCount = orderCount != null ? orderCount : OrderCount.zero();
+		this.viewCount = viewCount != null ? viewCount : ViewCount.zero();
 	}
 
 }

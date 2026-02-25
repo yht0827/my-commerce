@@ -1,0 +1,45 @@
+### 주문 생성 - 기본
+POST {{commerce-api}}/api/v1/orders
+X-USER-ID: orderuser1
+X-IDEMPOTENCY-KEY: orderuser1-20260219-0001
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2
+    }
+  ],
+  "couponId": null,
+  "cardType": "KB",
+  "cardNo": "1111-2222-3333-4444",
+  "callbackUrl": "https://callback.test/orders"
+}
+
+### 주문 생성 - 동일 멱등성 키 재요청(같은 주문 반환)
+POST {{commerce-api}}/api/v1/orders
+X-USER-ID: orderuser1
+X-IDEMPOTENCY-KEY: orderuser1-20260219-0001
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2
+    }
+  ],
+  "couponId": null,
+  "cardType": "KB",
+  "cardNo": "1111-2222-3333-4444",
+  "callbackUrl": "https://callback.test/orders"
+}
+
+### 주문 목록 조회
+GET {{commerce-api}}/api/v1/orders
+X-USER-ID: orderuser1
+
+### 주문 상세 조회
+GET {{commerce-api}}/api/v1/orders/ORD-EXAMPLE-001
+X-USER-ID: orderuser1

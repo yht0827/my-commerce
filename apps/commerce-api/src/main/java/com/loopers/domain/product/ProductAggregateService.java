@@ -20,6 +20,14 @@ public class ProductAggregateService {
 		return productAggregateRepository.decrementLikeCount(productId);
 	}
 
+	public boolean incrementOrderCount(final ProductId productId) {
+		return productAggregateRepository.incrementOrderCount(productId);
+	}
+
+	public boolean incrementViewCount(final ProductId productId) {
+		return productAggregateRepository.incrementViewCount(productId);
+	}
+
 	public void createIfNotExists(final ProductId productId) {
 		productAggregateRepository.createIfNotExists(productId);
 	}

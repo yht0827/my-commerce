@@ -25,8 +25,22 @@ public class PointService {
 		return point;
 	}
 
+	public Point use(final UserId userId, final Balance amount) {
+		Point point = findByUserIdWithPessimisticLock(userId);
+
+		point.useBalance(amount);
+		pointHistoryRepository.save(PointHistory.use(userId, amount));
+
+		return point;
+	}
+
 	public Point findByUserId(final UserId userId) {
 		return pointRepository.findByUserId(userId)
+			.orElseThrow(() -> new CoreException(NOT_FOUND, POINT_NOT_FOUND.format(userId.getUserId())));
+	}
+
+	private Point findByUserIdWithPessimisticLock(final UserId userId) {
+		return pointRepository.findByUserIdWithPessimisticLock(userId)
 			.orElseThrow(() -> new CoreException(NOT_FOUND, POINT_NOT_FOUND.format(userId.getUserId())));
 	}
 }

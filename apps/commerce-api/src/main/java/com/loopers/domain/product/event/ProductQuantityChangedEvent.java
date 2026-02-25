@@ -36,7 +36,7 @@ public record ProductQuantityChangedEvent(
 
 	@Override
 	public String getCorrelationId() {
-		return "";
+		return EVENT_TYPE + ":" + productId + ":" + occurredAt;
 	}
 
 	@Override

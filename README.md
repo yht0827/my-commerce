@@ -107,10 +107,16 @@ Root
 
 ### 인프라 실행
 
-`local` 프로필 실행에 필요한 인프라(MySQL, Redis, Kafka)를 Docker Compose로 제공합니다.
+`local` 프로필 실행에 필요한 인프라(MySQL, Redis, Kafka)를 Make 명령으로 간단히 실행할 수 있습니다.
 
 ```shell
-docker-compose -f ./docker/infra-compose.yml up -d
+make infra-up
+```
+
+인프라 + 모니터링을 한 번에 실행하려면:
+
+```shell
+make up
 ```
 
 ### 모니터링 환경 (선택)
@@ -118,11 +124,19 @@ docker-compose -f ./docker/infra-compose.yml up -d
 Prometheus와 Grafana를 통한 모니터링 환경을 제공합니다.
 
 ```shell
-docker-compose -f ./docker/monitoring-compose.yml up -d
+make monitor-up
 ```
 
 애플리케이션 실행 후 http://localhost:3000 에서 Grafana에 접속할 수 있습니다.
 - 계정: `admin` / `admin`
+
+Prometheus: http://localhost:9091
+
+종료:
+
+```shell
+make down
+```
 
 ---
 

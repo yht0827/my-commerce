@@ -17,7 +17,8 @@ public class DataPlatformApplicationService {
 
 	public void sendEvent(final DataPlatformEvent event) {
 		try {
-			dataPlatformGateway.send(event);
+			// 일반 경로는 예외를 삼키고 로그만 남긴다(비차단 전송).
+			sendEventWithFailure(event);
 		} catch (Exception e) {
 			log.error(
 				"Data platform dispatch failed: eventType={}, dataType={}, aggregateId={}, occurredAt={}, correlationId={}",
@@ -29,5 +30,10 @@ public class DataPlatformApplicationService {
 				e
 			);
 		}
+	}
+
+	public void sendEventWithFailure(final DataPlatformEvent event) {
+		// outbox dispatcher 경로는 실패를 상위로 전파해 retry 제어를 맡긴다.
+		dataPlatformGateway.send(event);
 	}
 }

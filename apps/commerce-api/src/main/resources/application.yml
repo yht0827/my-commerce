@@ -35,6 +35,18 @@ clients:
     name: dataPlatformClient
     url: http://localhost:8083
 
+payments:
+  callback:
+    signature:
+      enabled: false
+      secret: ""
+      tolerance-seconds: 300
+
+cache:
+  version:
+    product: v1
+    brand: v1
+
 springdoc:
   use-fqn: true
   swagger-ui:

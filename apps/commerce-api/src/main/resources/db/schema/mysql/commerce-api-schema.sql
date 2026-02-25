@@ -84,13 +84,55 @@ CREATE TABLE IF NOT EXISTS product_aggregate
     id         BIGINT      NOT NULL AUTO_INCREMENT,
     product_id BIGINT      NOT NULL,
     like_count BIGINT      NOT NULL DEFAULT 0,
+    order_count BIGINT     NOT NULL DEFAULT 0,
+    view_count BIGINT      NOT NULL DEFAULT 0,
     created_at DATETIME(6) NOT NULL,
     updated_at DATETIME(6) NOT NULL,
     deleted_at DATETIME(6) NULL,
     PRIMARY KEY (id),
     CONSTRAINT uk_product_aggregate_product_id UNIQUE (product_id),
     CONSTRAINT chk_product_aggregate_like_count_non_negative CHECK (like_count >= 0),
+    CONSTRAINT chk_product_aggregate_order_count_non_negative CHECK (order_count >= 0),
+    CONSTRAINT chk_product_aggregate_view_count_non_negative CHECK (view_count >= 0),
     CONSTRAINT fk_product_aggregate_product_id FOREIGN KEY (product_id) REFERENCES products (id)
+) DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS product_counter_event_history
+(
+    id            BIGINT       NOT NULL AUTO_INCREMENT,
+    dedupe_key    VARCHAR(128) NOT NULL,
+    product_id    BIGINT       NOT NULL,
+    counter_type  VARCHAR(20)  NOT NULL,
+    process_status VARCHAR(20) NOT NULL,
+    failed_reason VARCHAR(255) NULL,
+    processed_at  DATETIME(6)  NULL,
+    created_at    DATETIME(6)  NOT NULL,
+    updated_at    DATETIME(6)  NOT NULL,
+    deleted_at    DATETIME(6)  NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_product_counter_event_history_dedupe_key UNIQUE (dedupe_key),
+    INDEX idx_product_counter_event_history_product_id (product_id),
+    INDEX idx_product_counter_event_history_counter_type (counter_type),
+    INDEX idx_product_counter_event_history_process_status (process_status)
+) DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS product_ranking
+(
+    id            BIGINT       NOT NULL AUTO_INCREMENT,
+    product_id    BIGINT       NOT NULL,
+    rank_type     VARCHAR(20)  NOT NULL,
+    rank_position BIGINT       NOT NULL,
+    score         DOUBLE       NOT NULL,
+    rank_date     DATE         NOT NULL,
+    created_at    DATETIME(6)  NOT NULL,
+    updated_at    DATETIME(6)  NOT NULL,
+    deleted_at    DATETIME(6)  NULL,
+    PRIMARY KEY (id),
+    INDEX idx_product_ranking_type_date (rank_type, rank_date),
+    INDEX idx_product_ranking_product_id (product_id),
+    CONSTRAINT fk_product_ranking_product_id FOREIGN KEY (product_id) REFERENCES products (id)
 ) DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci;
 
@@ -159,5 +201,133 @@ CREATE TABLE IF NOT EXISTS coupons
     CONSTRAINT fk_coupons_user_id FOREIGN KEY (user_id) REFERENCES users (user_id),
     CONSTRAINT fk_coupons_product_id FOREIGN KEY (product_id) REFERENCES products (id),
     CONSTRAINT fk_coupons_brand_id FOREIGN KEY (brand_id) REFERENCES brands (id)
+) DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS orders
+(
+    id                     BIGINT      NOT NULL AUTO_INCREMENT,
+    user_id                VARCHAR(20) NOT NULL,
+    total_price            BIGINT      NOT NULL,
+    coupon_discount_amount BIGINT      NOT NULL,
+    final_payment_amount   BIGINT      NOT NULL,
+    order_number           VARCHAR(50) NOT NULL,
+    status                 VARCHAR(20) NOT NULL,
+    created_at             DATETIME(6) NOT NULL,
+    updated_at             DATETIME(6) NOT NULL,
+    deleted_at             DATETIME(6) NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_orders_order_number UNIQUE (order_number),
+    INDEX idx_orders_user_id_created_at (user_id, created_at DESC),
+    INDEX idx_orders_status (status),
+    CONSTRAINT chk_orders_total_price_non_negative CHECK (total_price >= 0),
+    CONSTRAINT chk_orders_coupon_discount_amount_non_negative CHECK (coupon_discount_amount >= 0),
+    CONSTRAINT chk_orders_final_payment_amount_non_negative CHECK (final_payment_amount >= 0),
+    CONSTRAINT fk_orders_user_id FOREIGN KEY (user_id) REFERENCES users (user_id)
+) DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS order_items
+(
+    id         BIGINT      NOT NULL AUTO_INCREMENT,
+    order_id   VARCHAR(50) NOT NULL,
+    product_id BIGINT      NOT NULL,
+    quantity   BIGINT      NOT NULL,
+    price      BIGINT      NOT NULL,
+    created_at DATETIME(6) NOT NULL,
+    updated_at DATETIME(6) NOT NULL,
+    deleted_at DATETIME(6) NULL,
+    PRIMARY KEY (id),
+    INDEX idx_order_items_order_id (order_id),
+    INDEX idx_order_items_product_id (product_id),
+    CONSTRAINT chk_order_items_quantity_non_negative CHECK (quantity >= 0),
+    CONSTRAINT chk_order_items_price_non_negative CHECK (price >= 0),
+    CONSTRAINT fk_order_items_order_id FOREIGN KEY (order_id) REFERENCES orders (order_number),
+    CONSTRAINT fk_order_items_product_id FOREIGN KEY (product_id) REFERENCES products (id)
+) DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS order_history
+(
+    id              BIGINT       NOT NULL AUTO_INCREMENT,
+    user_id         VARCHAR(20)  NOT NULL,
+    idempotency_key VARCHAR(100) NOT NULL,
+    order_id        VARCHAR(50)  NULL,
+    created_at      DATETIME(6)  NOT NULL,
+    updated_at      DATETIME(6)  NOT NULL,
+    deleted_at      DATETIME(6)  NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_order_history_user_idempotency_key UNIQUE (user_id, idempotency_key),
+    INDEX idx_order_history_order_id (order_id),
+    CONSTRAINT fk_order_history_user_id FOREIGN KEY (user_id) REFERENCES users (user_id),
+    CONSTRAINT fk_order_history_order_id FOREIGN KEY (order_id) REFERENCES orders (order_number)
+) DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS event_outbox
+(
+    id            BIGINT        NOT NULL AUTO_INCREMENT,
+    event_type    VARCHAR(50)   NOT NULL,
+    aggregate_id  VARCHAR(100)  NOT NULL,
+    dedupe_key    VARCHAR(150)  NOT NULL,
+    payload       LONGTEXT      NOT NULL,
+    status        VARCHAR(20)   NOT NULL,
+    retry_count   INT           NOT NULL DEFAULT 0,
+    next_retry_at DATETIME(6)   NOT NULL,
+    last_error    VARCHAR(500)  NULL,
+    created_at    DATETIME(6)   NOT NULL,
+    updated_at    DATETIME(6)   NOT NULL,
+    deleted_at    DATETIME(6)   NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_event_outbox_dedupe_key UNIQUE (dedupe_key),
+    INDEX idx_event_outbox_status_next_retry (status, next_retry_at),
+    INDEX idx_event_outbox_event_type_created_at (event_type, created_at)
+) DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS payment_callback_history
+(
+    id              BIGINT       NOT NULL AUTO_INCREMENT,
+    dedupe_key      VARCHAR(128) NOT NULL,
+    transaction_key VARCHAR(255) NULL,
+    order_id        VARCHAR(50)  NULL,
+    callback_status VARCHAR(20)  NULL,
+    process_status  VARCHAR(20)  NOT NULL,
+    failed_reason   VARCHAR(255) NULL,
+    processed_at    DATETIME(6)  NULL,
+    created_at      DATETIME(6)  NOT NULL,
+    updated_at      DATETIME(6)  NOT NULL,
+    deleted_at      DATETIME(6)  NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_payment_callback_history_dedupe_key UNIQUE (dedupe_key),
+    INDEX idx_payment_callback_history_transaction_key (transaction_key),
+    INDEX idx_payment_callback_history_order_id (order_id),
+    INDEX idx_payment_callback_history_process_status (process_status)
+) DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_0900_ai_ci;
+
+CREATE TABLE IF NOT EXISTS payments
+(
+    id              BIGINT       NOT NULL AUTO_INCREMENT,
+    order_id        VARCHAR(50)  NOT NULL,
+    user_id         VARCHAR(20)  NOT NULL,
+    card_type       VARCHAR(20)  NOT NULL,
+    card_no         VARCHAR(19)  NOT NULL,
+    price           BIGINT       NOT NULL,
+    callback_url    VARCHAR(500) NOT NULL,
+    transaction_key VARCHAR(255) NULL,
+    status          VARCHAR(20)  NOT NULL,
+    reason          VARCHAR(255) NOT NULL,
+    version         BIGINT       NOT NULL DEFAULT 0,
+    created_at      DATETIME(6)  NOT NULL,
+    updated_at      DATETIME(6)  NOT NULL,
+    deleted_at      DATETIME(6)  NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_payments_transaction_key UNIQUE (transaction_key),
+    INDEX idx_payments_order_id (order_id),
+    INDEX idx_payments_status (status),
+    CONSTRAINT chk_payments_price_non_negative CHECK (price >= 0),
+    CONSTRAINT fk_payments_order_id FOREIGN KEY (order_id) REFERENCES orders (order_number),
+    CONSTRAINT fk_payments_user_id FOREIGN KEY (user_id) REFERENCES users (user_id)
 ) DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci;

@@ -26,6 +26,8 @@ public enum ErrorMessage {
 	PRODUCT_ID_INVALID("제품 ID는 비어있을 수 없습니다."),
 	PRODUCT_NAME_REQUIRED("상품 이름은 비어있을 수 없습니다."),
 	PRODUCT_LIKE_COUNT_INVALID("좋아요 수는 0 이상이어야 합니다."),
+	PRODUCT_ORDER_COUNT_INVALID("주문 수는 0 이상이어야 합니다."),
+	PRODUCT_VIEW_COUNT_INVALID("조회 수는 0 이상이어야 합니다."),
 	PRODUCT_NOT_ORDERABLE("판매 중인 상품만 주문할 수 있습니다."),
 	LIKE_ALREADY_EXISTS("이미 좋아요를 누른 상품입니다."),
 	LIKE_NOT_FOUND("좋아요 정보를 찾을 수 없습니다."),
@@ -43,12 +45,18 @@ public enum ErrorMessage {
 	COUPON_USED_AT_REQUIRED("쿠폰 사용일은 비어있을 수 없습니다."),
 	COUPON_ALREADY_USED("이미 사용된 쿠폰입니다."),
 	COUPON_NOT_FOUND("해당 [id = %s]의 쿠폰이 존재하지 않습니다."),
+	RANKING_DATE_CANNOT_BE_FUTURE("랭킹 조회 날짜는 미래일 수 없습니다."),
+	RANKING_PERIOD_INVALID("유효하지 않은 랭킹 기간입니다. (daily, weekly, monthly)"),
 
 	PRODUCT_NOT_FOUND("해당 상품 ID '%s'의 상품을 찾을 수 없습니다."),
 	STOCK_NOT_FOUND("해당 상품 ID '%s'의 재고가 존재하지 않습니다."),
 	POINT_NOT_FOUND("해당 사용자 ID '%s'의 포인트가 존재하지 않습니다."),
+	POINT_INSUFFICIENT("포인트가 부족합니다."),
 	POINT_BALANCE_REQUIRED("포인트 금액은 필수입니다."),
-	POINT_BALANCE_INVALID("포인트 금액은 %d보다 커야 합니다.");
+	POINT_BALANCE_INVALID("포인트 금액은 %d보다 커야 합니다."),
+	ORDER_IDEMPOTENCY_KEY_REQUIRED("멱등성 키는 비어있을 수 없습니다."),
+	ORDER_IDEMPOTENCY_KEY_TOO_LONG("멱등성 키는 %d자 이하여야 합니다."),
+	ORDER_IDEMPOTENCY_KEY_IN_PROGRESS("동일 멱등성 키 요청이 처리 중입니다.");
 
 	private final String message;
 

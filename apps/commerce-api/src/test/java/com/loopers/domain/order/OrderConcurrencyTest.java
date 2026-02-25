@@ -5,7 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.loopers.application.order.OrderFacade;
+import com.loopers.application.order.OrderApplicationService;
 import com.loopers.domain.coupon.Coupon;
 import com.loopers.domain.point.Point;
 import com.loopers.domain.product.Product;
@@ -23,7 +23,7 @@ import com.loopers.infrastructure.product.ProductJpaRepository;
 public class OrderConcurrencyTest {
 
 	@Autowired
-	private OrderFacade orderFacade;
+	private OrderApplicationService orderApplicationService;
 
 	@Autowired
 	private OrderService orderService;

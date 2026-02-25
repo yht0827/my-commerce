@@ -1,646 +1,290 @@
 # 클래스 다이어그램
 
-> 도메인별 클래스 구조 및 관계
+> `apps/commerce-api` 현재 코드 기준 상세 클래스 구조
 
 ## 목차
 
-- [전체 도메인 구조](#전체-도메인-구조)
-- [회원 (User)](#회원-user)
-- [포인트 (Point)](#포인트-point)
-- [상품 (Product)](#상품-product)
-- [브랜드 (Brand)](#브랜드-brand)
-- [좋아요 (Like)](#좋아요-like)
-- [쿠폰 (Coupon)](#쿠폰-coupon)
-- [주문 (Order)](#주문-order)
+- [전체 레이어 구조](#전체-레이어-구조)
+- [회원/포인트](#회원포인트)
+- [상품/좋아요/집계](#상품좋아요집계)
+- [주문/아웃박스](#주문아웃박스)
+- [결제/콜백](#결제콜백)
+- [랭킹](#랭킹)
 
 ---
 
-## 전체 도메인 구조
+## 전체 레이어 구조
 
 ```mermaid
 classDiagram
     direction TB
 
-    User "1" --> "*" Point : has
-    User "1" --> "*" PointHistory : has
-    User "1" --> "*" Like : has
-    User "1" --> "*" Coupon : owns
-    User "1" --> "*" Order : places
+    class Interfaces
+    class Application
+    class Domain
+    class Infrastructure
 
-    Brand "1" --> "*" Product : owns
-    Brand "1" --> "*" Coupon : issues
-    Product "1" --> "*" Like : receives
-    Product "1" --> "1" Stock : has
-    Product "1" --> "*" Coupon : issues
-    Product "1" --> "*" OrderItem : included in
-
-    Order "1" --> "*" OrderItem : contains
-    Order "1" --> "1" Payment : has
+    Interfaces --> Application : invokes
+    Application --> Domain : orchestrates
+    Domain --> Infrastructure : repository impl
 ```
 
 ---
 
-## 회원 (User)
+## 회원/포인트
 
 ```mermaid
 classDiagram
-    class User {
-        -Long id
-        -UserId userId
-        -Email email
-        -Birthday birthday
-        -Gender gender
-        -ZonedDateTime createdAt
-        -ZonedDateTime updatedAt
-        +create(userId, email, birthday, gender) User
-    }
+    direction LR
 
-    class Gender {
-        <<enumeration>>
-        MALE
-        FEMALE
-        OTHER
-    }
+    class UserV1Controller
+    class UserApplicationService
+    class UserService
+    class UserRepository
+    class User
 
-    class UserResult {
-        <<DTO>>
-        +Long id
-        +String userId
-        +String email
-        +String birthday
-        +String gender
-        +String createdAt
-    }
-
-    class UserRepository {
-        <<interface>>
-        +save(user) User
-        +findByUserId(userId) Optional~User~
-        +existsByUserId(userId) boolean
-        +existsByEmail(email) boolean
-    }
-
-    class UserService {
-        -UserRepository userRepository
-        +register(userId, email, birthday, gender) User
-        +findByUserId(userId) User
-    }
-
-    User --> Gender
-    User ..> UserResult : creates
+    UserV1Controller --> UserApplicationService
+    UserApplicationService --> UserService
     UserService --> UserRepository
-    UserService --> User
-```
+    UserRepository --> User
 
----
-
-## 포인트 (Point)
-
-```mermaid
-classDiagram
-    class Point {
-        -Long id
-        -Long userId
-        -Long balance
-        -LocalDateTime updatedAt
-        +charge(amount) void
-        +use(amount) void
-        +getBalance() Long
+    class PointV1Controller
+    class PointApplicationService {
+        +chargePoint(command) PointResult
+        +getPoint(query) PointResult
     }
-
-    class PointHistory {
-        -Long id
-        -Long userId
-        -Long amount
-        -PointType type
-        -String description
-        -LocalDateTime createdAt
-    }
-
-    class PointType {
-        <<enumeration>>
-        CHARGE
-        USE
-        REFUND
-    }
-
-    class PointInfo {
-        <<DTO>>
-        +Long balance
-        +List~PointHistoryInfo~ histories
-    }
-
-    class PointHistoryInfo {
-        <<DTO>>
-        +Long amount
-        +PointType type
-        +String description
-        +LocalDateTime createdAt
-    }
-
-    class PointRepository {
-        <<interface>>
-        +save(point) Point
-        +findByUserId(userId) Optional~Point~
-        +findByUserIdWithLock(userId) Optional~Point~
-    }
-
-    class PointHistoryRepository {
-        <<interface>>
-        +save(history) PointHistory
-        +findByUserIdOrderByCreatedAtDesc(userId) List~PointHistory~
-    }
-
     class PointService {
-        -PointRepository pointRepository
-        -PointHistoryRepository historyRepository
-        +charge(userId, amount) PointInfo
-        +use(userId, amount) void
-        +getPointInfo(userId) PointInfo
+        +charge(userId,amount) Point
+        +use(userId,amount) Point
+        +findByUserId(userId) Point
     }
+    class PointRepository
+    class PointHistoryRepository
+    class Point
+    class PointHistory
 
-    Point --> PointHistory : records
-    PointHistory --> PointType
+    PointV1Controller --> PointApplicationService
+    PointApplicationService --> PointService
     PointService --> PointRepository
     PointService --> PointHistoryRepository
+    PointRepository --> Point
+    PointHistoryRepository --> PointHistory
 ```
 
 ---
 
-## 상품 (Product)
-
-```mermaid
-classDiagram
-    class Product {
-        -Long id
-        -Long brandId
-        -String name
-        -String description
-        -Long price
-        -ProductStatus status
-        -Long likeCount
-        -LocalDateTime createdAt
-        -LocalDateTime updatedAt
-        +isAvailable() boolean
-        +increaseLikeCount() void
-        +decreaseLikeCount() void
-    }
-
-    class ProductStatus {
-        <<enumeration>>
-        ON_SALE
-        SOLD_OUT
-        DISCONTINUED
-    }
-
-    class Stock {
-        -Long id
-        -Long productId
-        -Integer quantity
-        -LocalDateTime updatedAt
-        +decrease(quantity) void
-        +increase(quantity) void
-        +hasEnough(quantity) boolean
-    }
-
-    class ProductInfo {
-        <<DTO>>
-        +Long id
-        +String name
-        +String description
-        +Long price
-        +ProductStatus status
-        +Long likeCount
-        +Integer stockQuantity
-        +BrandInfo brand
-    }
-
-    class ProductListInfo {
-        <<DTO>>
-        +List~ProductInfo~ products
-        +PageInfo pageInfo
-    }
-
-    class ProductRepository {
-        <<interface>>
-        +save(product) Product
-        +findById(id) Optional~Product~
-        +findAll(condition, pageable) Page~Product~
-        +findByBrandId(brandId, pageable) Page~Product~
-    }
-
-    class StockRepository {
-        <<interface>>
-        +save(stock) Stock
-        +findByProductId(productId) Optional~Stock~
-        +findByProductIdWithLock(productId) Optional~Stock~
-    }
-
-    class ProductService {
-        -ProductRepository productRepository
-        -StockRepository stockRepository
-        -BrandRepository brandRepository
-        +getProducts(condition, pageable) ProductListInfo
-        +getProductDetail(productId) ProductInfo
-    }
-
-    Product --> ProductStatus
-    Product "1" --> "1" Stock
-    ProductService --> ProductRepository
-    ProductService --> StockRepository
-```
-
----
-
-## 브랜드 (Brand)
-
-```mermaid
-classDiagram
-    class Brand {
-        -Long id
-        -String name
-        -String description
-        -String logoUrl
-        -LocalDateTime createdAt
-        -LocalDateTime updatedAt
-    }
-
-    class BrandInfo {
-        <<DTO>>
-        +Long id
-        +String name
-        +String description
-        +String logoUrl
-    }
-
-    class BrandDetailInfo {
-        <<DTO>>
-        +BrandInfo brand
-        +List~ProductInfo~ products
-    }
-
-    class BrandRepository {
-        <<interface>>
-        +save(brand) Brand
-        +findById(id) Optional~Brand~
-        +findAll() List~Brand~
-    }
-
-    class BrandService {
-        -BrandRepository brandRepository
-        -ProductRepository productRepository
-        +getBrandDetail(brandId) BrandDetailInfo
-    }
-
-    Brand ..> BrandInfo : maps to
-    BrandService --> BrandRepository
-    BrandService --> ProductRepository
-```
-
----
-
-## 좋아요 (Like)
-
-```mermaid
-classDiagram
-    class LikeV1Controller {
-        -LikeFacade likeFacade
-        +likeProduct(userId, productId) ApiResponse
-        +unlikeProduct(productId, userId) ApiResponse
-        +getLikedProductList(userId) ApiResponse
-    }
-
-    class LikeFacade {
-        -LikeService likeService
-        -EventPublisher eventPublisher
-        -LikeEventPublisher likeEventPublisher
-        +likeProduct(command) LikeResult
-        +unlikeProduct(command) void
-        +getLikedProductList(query) List~LikeResult~
-    }
-
-    class LikeCommand {
-        <<record>>
-        +LikeProduct
-        +UnlikeProduct
-    }
-
-    class LikeQuery {
-        <<record>>
-        +GetLikedProducts
-    }
-
-    class LikeData {
-        <<record>>
-        +LikeProduct
-        +UnlikeProduct
-        +GetLikedProducts
-    }
-
-    class LikeService {
-        -LikeRepository likeRepository
-        +likeProduct(data) LikeInfo
-        +unlikeProduct(data) void
-        +getLikedProductList(data) List~LikeInfo~
-    }
-
-    class LikeInfo {
-        <<record>>
-        +String userId
-        +Long productId
-    }
-
-    class LikeRepository {
-        <<interface>>
-        +save(like) Like
-        +delete(like) void
-        +findAllByUserId(userId) List~Like~
-        +findByUserIdAndProductId(userId, productId) Optional~Like~
-    }
-
-    class Like {
-        -Long id
-        -UserId userId
-        -ProductId productId
-        -Long version
-        +create(userId, productId) Like
-    }
-
-    LikeV1Controller --> LikeFacade
-    LikeV1Controller --> LikeCommand
-    LikeV1Controller --> LikeQuery
-    LikeFacade --> LikeService
-    LikeCommand --> LikeData
-    LikeQuery --> LikeData
-    LikeService --> LikeRepository
-    LikeService ..> LikeInfo : maps to
-    LikeRepository --> Like
-```
-
----
-
-## 쿠폰 (Coupon)
-
-```mermaid
-classDiagram
-    class Coupon {
-        -Long id
-        -UserId userId
-        -ProductId productId
-        -BrandId brandId
-        -CouponName couponName
-        -DiscountPolicy discountPolicy
-        -CouponIssuedAt couponIssuedAt
-        -CouponUsedAt couponUsedAt
-        -CouponExpiredAt couponExpiredAt
-        -CouponStatus couponStatus
-        +markAsUsed() void
-        +calculateDiscount(amount) Long
-        +applyDiscount(totalOrderPrice) CouponDiscountAmount
-    }
-
-    class DiscountPolicy {
-        -DiscountValue discountValue
-        -MaxDiscountAmount maxDiscountAmount
-        -CouponType couponType
-        +calculate(amount) Long
-    }
-
-    class DiscountValue {
-        -Long discountValue
-        +calculateFixedDiscount(amount) Long
-        +calculatePercentageDiscount(amount) Long
-    }
-
-    class MaxDiscountAmount {
-        -Long maxDiscountAmount
-        +applyMaxDiscountLimit(calculatedDiscount) Long
-        +hasLimit() boolean
-    }
-
-    class CouponType {
-        <<enumeration>>
-        FIXED_AMOUNT
-        PERCENTAGE
-    }
-
-    class CouponStatus {
-        <<enumeration>>
-        ACTIVE
-        INACTIVE
-        EXPIRED
-        USED
-    }
-
-    class CouponRepository {
-        <<interface>>
-        +findById(id) Optional~Coupon~
-        +findByIdWithPessimisticLock(id) Optional~Coupon~
-        +findByIdWithOptimisticLock(id) Optional~Coupon~
-        +save(coupon) Coupon
-    }
-
-    class CouponService {
-        -CouponRepository couponRepository
-        +applyDiscount(couponId, totalOrderPrice) CouponDiscountAmount
-    }
-
-    Coupon --> DiscountPolicy
-    DiscountPolicy --> DiscountValue
-    DiscountPolicy --> MaxDiscountAmount
-    DiscountPolicy --> CouponType
-    Coupon --> CouponStatus
-    CouponService --> CouponRepository
-    CouponService --> Coupon
-```
----
-
-## 주문 (Order)
-
-```mermaid
-classDiagram
-    class Order {
-        -Long id
-        -Long userId
-        -String orderNumber
-        -OrderStatus status
-        -Long totalAmount
-        -LocalDateTime orderedAt
-        -LocalDateTime updatedAt
-        +create(user, items) Order
-        +cancel() void
-        +complete() void
-    }
-
-    class OrderStatus {
-        <<enumeration>>
-        PENDING
-        PAID
-        COMPLETED
-        CANCELLED
-    }
-
-    class OrderItem {
-        -Long id
-        -Long orderId
-        -Long productId
-        -String productName
-        -Long price
-        -Integer quantity
-        -Long subtotal
-    }
-
-    class Payment {
-        -Long id
-        -Long orderId
-        -Long amount
-        -PaymentMethod method
-        -PaymentStatus status
-        -LocalDateTime paidAt
-    }
-
-    class PaymentMethod {
-        <<enumeration>>
-        POINT
-    }
-
-    class PaymentStatus {
-        <<enumeration>>
-        PENDING
-        COMPLETED
-        FAILED
-        REFUNDED
-    }
-
-    class OrderCreateCommand {
-        <<DTO>>
-        +String userId
-        +List~OrderItemCommand~ items
-    }
-
-    class OrderItemCommand {
-        <<DTO>>
-        +Long productId
-        +Integer quantity
-    }
-
-    class OrderInfo {
-        <<DTO>>
-        +Long id
-        +String orderNumber
-        +OrderStatus status
-        +Long totalAmount
-        +List~OrderItemInfo~ items
-        +PaymentInfo payment
-        +LocalDateTime orderedAt
-    }
-
-    class OrderRepository {
-        <<interface>>
-        +save(order) Order
-        +findById(id) Optional~Order~
-        +findByUserIdOrderByOrderedAtDesc(userId) List~Order~
-    }
-
-    class OrderItemRepository {
-        <<interface>>
-        +saveAll(items) List~OrderItem~
-        +findByOrderId(orderId) List~OrderItem~
-    }
-
-    class PaymentRepository {
-        <<interface>>
-        +save(payment) Payment
-        +findByOrderId(orderId) Optional~Payment~
-    }
-
-    class OrderService {
-        -OrderRepository orderRepository
-        -OrderItemRepository orderItemRepository
-        -PaymentRepository paymentRepository
-        -ProductService productService
-        -StockService stockService
-        -PointService pointService
-        +createOrder(command) OrderInfo
-        +getOrders(userId) List~OrderInfo~
-        +getOrderDetail(userId, orderId) OrderInfo
-    }
-
-    Order --> OrderStatus
-    Order "1" --> "*" OrderItem : contains
-    Order "1" --> "1" Payment : has
-    Payment --> PaymentMethod
-    Payment --> PaymentStatus
-    OrderService --> OrderRepository
-    OrderService --> OrderItemRepository
-    OrderService --> PaymentRepository
-```
-
----
-
-## 레이어드 아키텍처
+## 상품/좋아요/집계
 
 ```mermaid
 classDiagram
     direction TB
 
-    class Controller {
-        <<interface>>
-        +handle request
-        +return response
+    class ProductV1Controller
+    class ProductApplicationService {
+        +getProductList(query) ProductListResult
+        +getProductDetail(query) ProductDetailResult
     }
-
-    class Service {
-        <<interface>>
-        +business logic
-        +transaction management
-    }
-
-    class Repository {
-        <<interface>>
-        +data access
-        +CRUD operations
-    }
-
-    class Entity {
-        <<interface>>
-        +domain model
-        +business rules
-    }
-
-    Controller --> Service : uses
-    Service --> Repository : uses
-    Repository --> Entity : manages
-
-    class UserController
-    class ProductController
-    class OrderController
-
-    class UserService
-    class ProductService
-    class OrderService
-
-    class UserRepository
+    class ProductQueryService
     class ProductRepository
-    class OrderRepository
-
-    class User
+    class ProductAggregateRepository
     class Product
-    class Order
+    class ProductAggregate
 
-    UserController ..|> Controller
-    ProductController ..|> Controller
-    OrderController ..|> Controller
+    ProductV1Controller --> ProductApplicationService
+    ProductApplicationService --> ProductQueryService
+    ProductQueryService --> ProductRepository
+    ProductRepository --> Product
+    ProductAggregateRepository --> ProductAggregate
 
-    UserService ..|> Service
-    ProductService ..|> Service
-    OrderService ..|> Service
+    class LikeV1Controller
+    class LikeApplicationService
+    class LikeService
+    class LikeRepository
+    class Like
 
-    UserRepository ..|> Repository
-    ProductRepository ..|> Repository
-    OrderRepository ..|> Repository
+    LikeV1Controller --> LikeApplicationService
+    LikeApplicationService --> LikeService
+    LikeService --> LikeRepository
+    LikeRepository --> Like
 
-    User ..|> Entity
-    Product ..|> Entity
-    Order ..|> Entity
+    class LikeEventHandler {
+        +handleProductLiked(event)
+        +handleProductUnliked(event)
+    }
+    class ProductCounterEventHandler {
+        +handleProductOrdered(event)
+        +handleProductViewed(event)
+    }
+    class ProductCounterEventHistoryService {
+        +generateDedupeKey(source) String
+        +claim(dedupeKey, productId, type) boolean
+        +markProcessing(dedupeKey)
+        +complete(dedupeKey)
+        +fail(dedupeKey, reason)
+    }
+    class ProductAggregateService
+    class ProductCounterReconciliationService {
+        +reconcileAllAggregates()
+        +retryFailedCounterEvents(limit)
+        +reconcileProduct(productId)
+    }
+    class ProductCounterReconciliationScheduler
+
+    LikeEventHandler --> ProductCounterEventHistoryService
+    LikeEventHandler --> ProductAggregateService
+    ProductCounterEventHandler --> ProductCounterEventHistoryService
+    ProductCounterEventHandler --> ProductAggregateService
+    ProductCounterEventHandler --> RankingRealtimeUpdateService
+    ProductCounterReconciliationService --> ProductAggregateRepository
+    ProductCounterReconciliationService --> ProductCounterEventHistoryRepository
+    ProductCounterReconciliationService --> LikeRepository
+    ProductCounterReconciliationService --> OrderItemRepository
+    ProductCounterReconciliationScheduler --> ProductCounterReconciliationService
 ```
+
+---
+
+## 주문/아웃박스
+
+```mermaid
+classDiagram
+    direction TB
+
+    class OrderV1Controller
+    class OrderApplicationService {
+        +createOrder(command) OrderResult
+        +getOrders(query) List~OrderResult~
+        +getOrder(query) OrderResult
+    }
+    class OrderProcessor {
+        +process(command) OrderProcessResult
+    }
+    class OrderService {
+        +createOrder(data,items,total,discount) OrderInfo
+        +updateOrderStatus(orderId,status)
+        +getOrder(data) OrderInfo
+        +getOrders(data) List~OrderInfo~
+    }
+    class OrderHistoryRepository {
+        +createIfNotExists(userId,key) boolean
+        +findByUserIdAndIdempotencyKey(userId,key)
+    }
+    class OutboxService
+    class OutboxDispatcherService
+    class OutboxEventScheduler
+
+    OrderV1Controller --> OrderApplicationService
+    OrderApplicationService --> OrderHistoryRepository
+    OrderApplicationService --> OrderProcessor
+    OrderApplicationService --> OrderService
+    OrderApplicationService --> OutboxService
+
+    OrderProcessor --> ProductStockService
+    OrderProcessor --> CouponService
+    OrderProcessor --> PointService
+    OrderProcessor --> OrderService
+
+    OutboxEventScheduler --> OutboxDispatcherService
+    OutboxDispatcherService --> OutboxService
+    OutboxDispatcherService --> PaymentProcessor
+    OutboxDispatcherService --> PaymentResultOutboxService
+    OutboxDispatcherService --> OrderService
+    OutboxDispatcherService --> DataPlatformApplicationService
+```
+
+---
+
+## 결제/콜백
+
+```mermaid
+classDiagram
+    direction TB
+
+    class PaymentV1Controller {
+        +handleCallback(callbackHeaders, rawBody)
+    }
+
+    class PaymentApplicationService {
+        +acceptCallback(command) boolean
+        +processCallback(command) PaymentResult
+        +processOrderPayment(orderCreatedEvent) PaymentResult
+    }
+
+    class PaymentProcessor {
+        +process(createPaymentCommand) PaymentInfo
+    }
+
+    class PaymentService {
+        +createPayment(request) Payment
+        +updatePaymentStatus(payment, pgTransaction) PaymentInfo
+        +processCallback(callback) PaymentInfo
+    }
+
+    class PaymentGatewayService {
+        +requestPaymentGateway(request) Transaction
+        +processCallbackWithVerification(payment, callback) PaymentInfo
+        +verifyPendingPayments() List~PaymentInfo~
+    }
+
+    class PaymentCallbackSignatureVerifier
+    class PaymentCallbackHistoryService
+    class PaymentCallbackAsyncProcessor
+    class PaymentResultOutboxService
+    class PaymentEventHandler
+    class PaymentVerificationScheduler
+
+    PaymentV1Controller --> PaymentApplicationService
+    PaymentApplicationService --> PaymentCallbackSignatureVerifier
+    PaymentApplicationService --> PaymentCallbackHistoryService
+    PaymentApplicationService --> PaymentCallbackAsyncProcessor
+    PaymentApplicationService --> PaymentProcessor
+    PaymentApplicationService --> PaymentService
+
+    PaymentCallbackAsyncProcessor --> PaymentService
+    PaymentCallbackAsyncProcessor --> PaymentCallbackHistoryService
+    PaymentCallbackAsyncProcessor --> PaymentResultOutboxService
+
+    PaymentProcessor --> PaymentService
+    PaymentProcessor --> PaymentGatewayService
+    PaymentService --> PaymentGatewayService
+    PaymentGatewayService --> PaymentStatusSynchronizer
+
+    PaymentEventHandler --> PaymentApplicationService
+    PaymentVerificationScheduler --> PaymentGatewayService
+    PaymentVerificationScheduler --> PaymentResultOutboxService
+```
+
+---
+
+## 랭킹
+
+```mermaid
+classDiagram
+    direction LR
+
+    class RankingV1Controller
+    class RankingApplicationService
+    class RankingQueryService
+    class RedisRankingRepository
+    class RankingSnapshotRepository
+    class RankingRealtimeUpdateService
+    class RankingPeriod
+
+    RankingV1Controller --> RankingApplicationService
+    RankingApplicationService --> RankingQueryService
+    RankingQueryService --> RedisRankingRepository
+    RankingQueryService --> RankingSnapshotRepository
+    RankingRealtimeUpdateService --> RedisRankingRepository
+    RankingQueryService --> RankingPeriod
+```
+
+---
+
+## 동시성/멱등성 제어 포인트
+
+- 주문 경로 행락: `products`, `coupons`, `points`는 `PESSIMISTIC_WRITE` 기반 접근
+- 엔티티 버전: `Product`, `Coupon`, `Like`, `Payment`
+- 주문 멱등성: `order_history(user_id, idempotency_key)` 유니크 + claim 패턴
+- 콜백 멱등성: `payment_callback_history.dedupe_key` 유니크
+- 카운터 멱등성: `product_counter_event_history.dedupe_key` 유니크
+- 아웃박스 멱등성: `event_outbox.dedupe_key` 유니크

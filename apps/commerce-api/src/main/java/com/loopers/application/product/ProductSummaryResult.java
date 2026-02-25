@@ -8,7 +8,9 @@ public record ProductSummaryResult(
 	Long price,
 	Long quantity,
 	String brandName,
-	Long likeCount
+	Long likeCount,
+	Long orderCount,
+	Long viewCount
 ) {
 	public static ProductSummaryResult from(final ProductInfo productInfo) {
 		return new ProductSummaryResult(
@@ -17,7 +19,9 @@ public record ProductSummaryResult(
 			productInfo.price(),
 			productInfo.quantity(),
 			productInfo.brandName(),
-			productInfo.likeCount()
+			productInfo.likeCount(),
+			productInfo.orderCount(),
+			productInfo.viewCount()
 		);
 	}
 }

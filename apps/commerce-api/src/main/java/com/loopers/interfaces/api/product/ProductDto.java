@@ -25,7 +25,7 @@ public record ProductDto() {
 			@Positive Integer size,
 			@Schema(description = "브랜드 ID 필터", example = "1")
 			Long brandId,
-			@Schema(description = "정렬 기준(latest, price_asc, likes_desc)", example = "latest")
+			@Schema(description = "정렬 기준(latest, price_asc, likes_desc, orders_desc, views_desc)", example = "latest")
 			String sort
 		) {
 
@@ -52,12 +52,17 @@ public record ProductDto() {
 			@Schema(description = "브랜드명", example = "나이키")
 			String brandName,
 			@Schema(description = "좋아요 수", example = "321")
-			Long likeCount
+			Long likeCount,
+			@Schema(description = "주문 수", example = "45")
+			Long orderCount,
+			@Schema(description = "조회 수", example = "1234")
+			Long viewCount
 		) {
 			public static ProductDetailResponse from(final ProductDetailResult productDetailResult) {
 				return new ProductDetailResponse(
 					productDetailResult.productId(), productDetailResult.productName(), productDetailResult.price(),
-					productDetailResult.quantity(), productDetailResult.brandName(), productDetailResult.likeCount());
+					productDetailResult.quantity(), productDetailResult.brandName(), productDetailResult.likeCount(),
+					productDetailResult.orderCount(), productDetailResult.viewCount());
 			}
 		}
 
@@ -73,7 +78,11 @@ public record ProductDto() {
 			@Schema(description = "브랜드명", example = "나이키")
 			String brandName,
 			@Schema(description = "좋아요 수", example = "321")
-			Long likeCount
+			Long likeCount,
+			@Schema(description = "주문 수", example = "45")
+			Long orderCount,
+			@Schema(description = "조회 수", example = "1234")
+			Long viewCount
 		) {
 			public static ProductSummaryResponse from(final ProductSummaryResult productSummaryResult) {
 				return new ProductSummaryResponse(
@@ -82,7 +91,9 @@ public record ProductDto() {
 					productSummaryResult.price(),
 					productSummaryResult.quantity(),
 					productSummaryResult.brandName(),
-					productSummaryResult.likeCount()
+					productSummaryResult.likeCount(),
+					productSummaryResult.orderCount(),
+					productSummaryResult.viewCount()
 				);
 			}
 		}

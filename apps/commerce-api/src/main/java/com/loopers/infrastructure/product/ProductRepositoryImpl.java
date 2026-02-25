@@ -35,6 +35,8 @@ import lombok.RequiredArgsConstructor;
 public class ProductRepositoryImpl implements ProductRepository {
 	private static final String SORT_PROPERTY_PRICE = "price";
 	private static final String SORT_PROPERTY_LIKES_COUNT = "likesCount";
+	private static final String SORT_PROPERTY_ORDER_COUNT = "orderCount";
+	private static final String SORT_PROPERTY_VIEW_COUNT = "viewCount";
 
 	private final ProductJpaRepository productJpaRepository;
 	private final JPAQueryFactory jpaQueryFactory;
@@ -117,7 +119,9 @@ public class ProductRepositoryImpl implements ProductRepository {
 					product.price.price,
 					product.quantity.quantity,
 					brand.brandName.brandName,
-					productAggregate.likeCount.likeCount.coalesce(0L)
+					productAggregate.likeCount.likeCount.coalesce(0L),
+					productAggregate.orderCount.orderCount.coalesce(0L),
+					productAggregate.viewCount.viewCount.coalesce(0L)
 				)
 			)
 			.from(product)
@@ -147,6 +151,8 @@ public class ProductRepositoryImpl implements ProductRepository {
 		return switch (order.getProperty()) {
 			case SORT_PROPERTY_PRICE -> new OrderSpecifier<>(direction, product.price.price);
 			case SORT_PROPERTY_LIKES_COUNT -> new OrderSpecifier<>(direction, productAggregate.likeCount.likeCount);
+			case SORT_PROPERTY_ORDER_COUNT -> new OrderSpecifier<>(direction, productAggregate.orderCount.orderCount);
+			case SORT_PROPERTY_VIEW_COUNT -> new OrderSpecifier<>(direction, productAggregate.viewCount.viewCount);
 			default -> new OrderSpecifier<>(direction, product.createdAt);
 		};
 	}
