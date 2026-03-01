@@ -2,7 +2,6 @@ package com.loopers.domain.payment;
 
 import org.springframework.stereotype.Service;
 
-import com.loopers.application.payment.PaymentCommand;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
@@ -15,25 +14,29 @@ public class PaymentService {
 	private final PaymentRepository paymentRepository;
 	private final PaymentGatewayService paymentGatewayService;
 
-	public void createPayment(final PaymentData.PaymentRequest data) {
+	public Payment createPayment(final PaymentData.PaymentRequest data) {
 		Payment payment = data.toEntity();
-		paymentRepository.save(payment);
+		return paymentRepository.save(payment);
 	}
 
-	public PaymentInfo updatePaymentStatus(PaymentData.PaymentRequest data, PaymentInfo.transaction pgResponse) {
-		Payment payment = data.toEntity();
+	public PaymentInfo updatePaymentStatus(Payment payment, PaymentInfo.Transaction pgResponse) {
+		if (pgResponse.transactionKey() != null && !pgResponse.transactionKey().isBlank()) {
+			payment.updateTransactionKey(pgResponse.transactionKey());
+		}
 
-		payment.updateTransactionKey(data.orderId());
+		TransactionStatus status = pgResponse.status() != null ? pgResponse.status() : TransactionStatus.PENDING;
 
-		if (pgResponse.status().equals(TransactionStatus.SUCCESS)) {
-			payment.processPaymentSuccess();
+		switch (status) {
+			case SUCCESS -> payment.processPaymentSuccess();
+			case FAILED -> payment.processPaymentFailed();
+			case INITIAL, PENDING -> payment.processPaymentPending();
 		}
 
 		return PaymentInfo.from(payment);
 	}
 
-	public PaymentInfo processCallback(PaymentCommand.ProcessCallback command) {
-		Payment payment = paymentRepository.findByTransactionKey(command.transactionKey())
+	public PaymentInfo processCallback(PaymentData.ProcessCallback command) {
+		Payment payment = paymentRepository.findByTransactionKeyForUpdate(command.transactionKey())
 			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "결제 정보를 찾을 수 없습니다."));
 
 		return paymentGatewayService.processCallbackWithVerification(payment, command);

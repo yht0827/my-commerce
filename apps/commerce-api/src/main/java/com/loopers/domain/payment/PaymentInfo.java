@@ -2,8 +2,6 @@ package com.loopers.domain.payment;
 
 import java.util.List;
 
-import com.loopers.infrastructure.payment.PgClientDto;
-
 public record PaymentInfo(
 	String transactionKey,
 	String orderId,
@@ -15,18 +13,23 @@ public record PaymentInfo(
 ) {
 
 	public static PaymentInfo from(final Payment payment) {
+		String transactionKey = payment.getTransactionKey() != null
+			? payment.getTransactionKey().getTransactionKey()
+			: null;
+		String reason = payment.getReason() != null ? payment.getReason().reason() : null;
+
 		return new PaymentInfo(
-			payment.getTransactionKey().getTransactionKey(),
+			transactionKey,
 			payment.getOrderId().getOrderId(),
 			payment.getCardType(),
 			payment.getCardNo().getCardNo(),
 			payment.getAmount().getPrice(),
 			payment.getStatus(),
-			payment.getReason().reason()
+			reason
 		);
 	}
 
-	public record transaction(
+	public record Transaction(
 		String transactionKey,
 		String orderId,
 		Long amount,
@@ -35,38 +38,12 @@ public record PaymentInfo(
 		TransactionStatus status,
 		String reason
 	) {
-
-		public static PaymentInfo.transaction toData(PgClientDto.PgPaymentTransaction pgPaymentTransaction) {
-			return new PaymentInfo.transaction(
-				pgPaymentTransaction.transactionKey(),
-				pgPaymentTransaction.orderId(),
-				pgPaymentTransaction.amount(),
-				pgPaymentTransaction.cardNo(),
-				pgPaymentTransaction.cardType(),
-				pgPaymentTransaction.status(),
-				pgPaymentTransaction.reason()
-			);
-		}
-
 	}
 
-	public record order(
+	public record Order(
 		String orderId,
 		List<TransactionResponse> transactions
 	) {
-		public static PaymentInfo.order toData(PgClientDto.PgPaymentOrderResponse pgPaymentOrderResponse) {
-			List<TransactionResponse> list = pgPaymentOrderResponse.transactions().stream()
-				.map(transactionResponse -> new TransactionResponse(
-					transactionResponse.transactionKey(),
-					transactionResponse.status(),
-					transactionResponse.reason()
-				)).toList();
-
-			return new PaymentInfo.order(
-				pgPaymentOrderResponse.orderId(),
-				list
-			);
-		}
 	}
 
 	public record TransactionResponse(

@@ -12,7 +12,15 @@ import lombok.extern.slf4j.Slf4j;
 public class DataPlatformFeignClient implements DataPlatformGateway {
 
 	@Override
-	public void send(DataPlatformEvent event) {
-		log.info("데이터 플랫폼 전송 - DataType: {}, AggregateId: {}", event.dataType(), event.aggregateId());
+	public void send(final DataPlatformEvent event) {
+		// TODO: Replace this stub with real external call and apply @Retry/@CircuitBreaker on this boundary.
+		log.info(
+			"Data platform dispatch stub: eventType={}, dataType={}, aggregateId={}, occurredAt={}, correlationId={}",
+			event.getEventType(),
+			event.dataType(),
+			event.aggregateId(),
+			event.occurredAt(),
+			event.getCorrelationId()
+		);
 	}
 }

@@ -17,9 +17,9 @@ datasource:
   mysql-jpa:
     main:
       driver-class-name: com.mysql.cj.jdbc.Driver
-      jdbc-url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}
-      username: ${MYSQL_USER}
-      password: "${MYSQL_PWD}"
+      jdbc-url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:loopers}
+      username: ${MYSQL_USER:application}
+      password: "${MYSQL_PWD:application}"
       pool-name: mysql-main-pool
       maximum-pool-size: 40
       minimum-idle: 30
@@ -37,7 +37,7 @@ spring.config.activate.on-profile: local
 
 spring:
   jpa:
-    show-sql: true
+    show-sql: false
     hibernate:
       ddl-auto: create
 

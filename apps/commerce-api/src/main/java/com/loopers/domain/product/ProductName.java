@@ -1,9 +1,11 @@
 package com.loopers.domain.product;
 
+import static com.loopers.support.error.ErrorMessage.*;
+import static com.loopers.support.error.ErrorType.*;
+
 import java.io.Serializable;
 
 import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -21,7 +23,7 @@ public class ProductName implements Serializable {
 	
 	public ProductName(String name) {
 		if (name == null || name.isBlank()) {
-			throw new CoreException(ErrorType.BAD_REQUEST, "상품 이름은 비어있을 수 없습니다.");
+			throw new CoreException(BAD_REQUEST, PRODUCT_NAME_REQUIRED.format());
 		}
 		this.name = name;
 	}

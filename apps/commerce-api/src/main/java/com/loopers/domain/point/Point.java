@@ -32,4 +32,8 @@ public class Point extends BaseEntity {
 	public void chargeBalance(final Balance balance) {
 		this.balance = this.balance.charge(balance);
 	}
+
+	public void useBalance(final Balance amount) {
+		this.balance = this.balance.use(amount);
+	}
 }

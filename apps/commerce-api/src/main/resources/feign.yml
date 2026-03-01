@@ -1,0 +1,28 @@
+feign:
+  client:
+    enabled: true
+    config:
+      default:
+        connectTimeout: 2000
+        readTimeout: 3000
+      pgClient:
+        connectTimeout: 5000
+        readTimeout: 6000
+      dataPlatformClient:
+        connectTimeout: 3000
+        readTimeout: 5000
+  compression:
+    request:
+      enabled: true
+      mime-types: application/json,application/xml,text/plain
+      min-request-size: 1024
+    response:
+      enabled: true
+
+---
+spring.config.activate.on-profile: prd
+
+feign:
+  client:
+    config:
+      default:

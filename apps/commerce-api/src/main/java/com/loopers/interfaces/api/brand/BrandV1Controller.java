@@ -5,23 +5,25 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.loopers.application.brand.BrandFacade;
+import com.loopers.application.brand.BrandApplicationService;
 import com.loopers.application.brand.BrandResult;
-import com.loopers.domain.brand.BrandId;
-import com.loopers.interfaces.api.ApiResponse;
+import com.loopers.application.brand.GetBrandQuery;
+import com.loopers.interfaces.api.common.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/brands")
-public class BrandV1Controller {
-	private final BrandFacade brandFacade;
+public class BrandV1Controller implements BrandV1ApiSpec {
+	private final BrandApplicationService brandApplicationService;
 
 	@GetMapping("/{brandId}")
-	public ApiResponse<BrandResponse> getBrandById(@PathVariable final BrandId brandId) {
-		BrandResult brandResult = brandFacade.getBrandById(brandId);
-		BrandResponse brandResponse = BrandResponse.from(brandResult);
-		return ApiResponse.success(brandResponse);
+	@Override
+	public ApiResponse<BrandDto.V1.BrandDetailResponse> getBrandById(@PathVariable final Long brandId) {
+		GetBrandQuery query = GetBrandQuery.of(brandId);
+		BrandResult brandResult = brandApplicationService.getBrandById(query);
+		BrandDto.V1.BrandDetailResponse response = BrandDto.V1.BrandDetailResponse.from(brandResult);
+		return ApiResponse.success(response);
 	}
 }

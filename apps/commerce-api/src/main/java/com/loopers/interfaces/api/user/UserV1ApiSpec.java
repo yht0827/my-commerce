@@ -1,6 +1,6 @@
 package com.loopers.interfaces.api.user;
 
-import com.loopers.interfaces.api.ApiResponse;
+import com.loopers.interfaces.api.common.ApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,7 +12,7 @@ public interface UserV1ApiSpec {
 		summary = "회원 가입",
 		description = "회원 가입을 합니다."
 	)
-	ApiResponse<UserDto.V1.UserResponse> createUser(final UserDto.V1.UserRequest request);
+	ApiResponse<UserDto.V1.UserResponse> createUser(final UserDto.V1.CreateUserRequest request);
 
 	@Operation(
 		summary = "내 정보 조회",

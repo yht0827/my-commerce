@@ -19,8 +19,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserId implements Serializable {
 
-	private static final Pattern VALID_USER_NAME_PATTERN = Pattern.compile("^[a-zA-Z0-9]{1,10}$");
-	private static final int MAX_LENGTH = 10;
+	private static final Pattern VALID_USER_ID_PATTERN = Pattern.compile("^[a-zA-Z0-9]{4,20}$");
+	private static final int MIN_LENGTH = 4;
+	private static final int MAX_LENGTH = 20;
 
 	@Column(name = "user_id")
 	private String userId;
@@ -30,11 +31,12 @@ public class UserId implements Serializable {
 			throw new CoreException(BAD_REQUEST, USER_ID_REQUIRED.getMessage());
 		}
 
-		if (!VALID_USER_NAME_PATTERN.matcher(userId.trim()).matches()) {
-			throw new CoreException(BAD_REQUEST, USER_NAME_INVALID_FORMAT.format(MAX_LENGTH));
+		String normalizedUserId = userId.trim();
+		if (!VALID_USER_ID_PATTERN.matcher(normalizedUserId).matches()) {
+			throw new CoreException(BAD_REQUEST, USER_ID_INVALID_FORMAT.format(MIN_LENGTH, MAX_LENGTH));
 		}
 
-		this.userId = userId;
+		this.userId = normalizedUserId;
 	}
 
 	public static UserId of(String userId) {

@@ -4,6 +4,6 @@ import java.util.Optional;
 
 public interface BrandRepository {
 
-	Optional<Brand> findById(final Long id);
+	Optional<Brand> findById(final BrandId id);
 
 }

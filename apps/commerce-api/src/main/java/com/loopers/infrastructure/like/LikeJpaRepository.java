@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.loopers.domain.like.Like;
 import com.loopers.domain.product.ProductId;
@@ -17,16 +18,19 @@ public interface LikeJpaRepository extends JpaRepository<Like, Long> {
 
 	Optional<Like> findByUserId(final UserId userId);
 
-	List<Like> findAllByUserId(UserId userId);
+	List<Like> findAllByUserId(final UserId userId);
 
-	@Query("SELECT l FROM Like l WHERE l.productId = :productId AND l.userId = :userId")
-	Optional<Like> findByUserIdAndProductId(UserId userId, ProductId productId);
+	@Query("SELECT l FROM Like l WHERE l.userId = :userId AND l.productId = :productId")
+	Optional<Like> findByUserIdAndProductId(final UserId userId, final ProductId productId);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	@Query("SELECT l FROM Like l WHERE l.productId = :productId AND l.userId = :userId")
-	Optional<Like> findByUserIdAndProductIdWithPessimisticLock(UserId userId, ProductId productId);
+	@Query("SELECT l FROM Like l WHERE l.userId = :userId AND l.productId = :productId")
+	Optional<Like> findByUserIdAndProductIdWithPessimisticLock(final UserId userId, final ProductId productId);
 
 	@Lock(LockModeType.OPTIMISTIC)
-	@Query("SELECT l FROM Like l WHERE l.productId = :productId AND l.userId = :userId")
-	Optional<Like> findByUserIdAndProductIdWithOptimisticLock(UserId userId, ProductId productId);
+	@Query("SELECT l FROM Like l WHERE l.userId = :userId AND l.productId = :productId")
+	Optional<Like> findByUserIdAndProductIdWithOptimisticLock(final UserId userId, final ProductId productId);
+
+	@Query("SELECT COUNT(l) FROM Like l WHERE l.productId.productId = :productId")
+	long countByProductId(@Param("productId") Long productId);
 }

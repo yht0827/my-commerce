@@ -33,7 +33,7 @@ public class LikeRepositoryImpl implements LikeRepository {
 	}
 
 	@Override
-	public List<Like> getAllLikedByUserId(final UserId userId) {
+	public List<Like> findAllByUserId(final UserId userId) {
 		return likeJpaRepository.findAllByUserId(userId);
 	}
 
@@ -50,6 +50,11 @@ public class LikeRepositoryImpl implements LikeRepository {
 	@Override
 	public Optional<Like> findByUserIdAndProductIdWithOptimisticLock(final UserId userId, final ProductId productId) {
 		return likeJpaRepository.findByUserIdAndProductIdWithOptimisticLock(userId, productId);
+	}
+
+	@Override
+	public long countByProductId(final ProductId productId) {
+		return likeJpaRepository.countByProductId(productId.getProductId());
 	}
 
 }

@@ -21,12 +21,17 @@ public class CouponRepositoryImpl implements CouponRepository {
 	}
 
 	@Override
-	public Optional<Coupon> findByIdWithPessimisticLock(Long id) {
+	public Optional<Coupon> findByIdWithPessimisticLock(final Long id) {
 		return couponJpaRepository.findByIdWithPessimisticLock(id);
 	}
 
 	@Override
-	public Optional<Coupon> findByIdWithOptimisticLock(Long id) {
+	public Optional<Coupon> findByIdWithOptimisticLock(final Long id) {
 		return couponJpaRepository.findByIdWithOptimisticLock(id);
+	}
+
+	@Override
+	public Coupon save(final Coupon coupon) {
+		return couponJpaRepository.save(coupon);
 	}
 }

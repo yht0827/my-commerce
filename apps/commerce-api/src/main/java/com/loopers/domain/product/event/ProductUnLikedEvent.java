@@ -31,7 +31,7 @@ public record ProductUnLikedEvent(String userId, Long productId, LocalDateTime o
 
 	@Override
 	public String getCorrelationId() {
-		return "";
+		return EVENT_TYPE + ":" + userId + ":" + productId + ":" + occurredAt;
 	}
 
 	@Override

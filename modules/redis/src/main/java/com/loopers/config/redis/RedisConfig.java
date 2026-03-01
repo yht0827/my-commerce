@@ -58,7 +58,7 @@ public class RedisConfig {
 	@Bean
 	public RedisTemplate<String, Object> defaultRedisTemplate(LettuceConnectionFactory lettuceConnectionFactory) {
 		RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
-		return defaultRedisTemplate(redisTemplate, lettuceConnectionFactory);
+		return createRedisTemplate(redisTemplate, lettuceConnectionFactory);
 	}
 
 	@Qualifier(REDIS_TEMPLATE_MASTER)
@@ -67,31 +67,34 @@ public class RedisConfig {
 		@Qualifier(CONNECTION_MASTER) LettuceConnectionFactory lettuceConnectionFactory
 	) {
 		RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
-		return defaultRedisTemplate(redisTemplate, lettuceConnectionFactory);
+		return createRedisTemplate(redisTemplate, lettuceConnectionFactory);
 	}
 
 	private LettuceConnectionFactory lettuceConnectionFactory(
-		int database,
-		RedisNodeInfo master,
-		List<RedisNodeInfo> replicas,
-		Consumer<LettuceClientConfiguration.LettuceClientConfigurationBuilder> customizer
+		final int database,
+		final RedisNodeInfo master,
+		final List<RedisNodeInfo> replicas,
+		final Consumer<LettuceClientConfiguration.LettuceClientConfigurationBuilder> customizer
 	) {
 		LettuceClientConfiguration.LettuceClientConfigurationBuilder builder = LettuceClientConfiguration.builder();
-		if (customizer != null)
+		if (customizer != null) {
 			customizer.accept(builder);
+		}
 		LettuceClientConfiguration clientConfig = builder.build();
 		RedisStaticMasterReplicaConfiguration masterReplicaConfig = new RedisStaticMasterReplicaConfiguration(master.host(),
 			master.port());
 		masterReplicaConfig.setDatabase(database);
-		for (RedisNodeInfo r : replicas) {
-			masterReplicaConfig.addNode(r.host(), r.port());
+		if (replicas != null) {
+			for (RedisNodeInfo replica : replicas) {
+				masterReplicaConfig.addNode(replica.host(), replica.port());
+			}
 		}
 		return new LettuceConnectionFactory(masterReplicaConfig, clientConfig);
 	}
 
-	private <K, V> RedisTemplate<K, V> defaultRedisTemplate(
-		RedisTemplate<K, V> template,
-		LettuceConnectionFactory connectionFactory
+	private <K, V> RedisTemplate<K, V> createRedisTemplate(
+		final RedisTemplate<K, V> template,
+		final LettuceConnectionFactory connectionFactory
 	) {
 		StringRedisSerializer keySerializer = new StringRedisSerializer();
 		GenericJackson2JsonRedisSerializer valueSerializer = new GenericJackson2JsonRedisSerializer();
@@ -100,6 +103,7 @@ public class RedisConfig {
 		template.setHashKeySerializer(keySerializer);
 		template.setHashValueSerializer(valueSerializer);
 		template.setConnectionFactory(connectionFactory);
+		template.afterPropertiesSet();
 		return template;
 	}
 

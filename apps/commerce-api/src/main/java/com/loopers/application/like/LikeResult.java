@@ -1,12 +1,12 @@
 package com.loopers.application.like;
 
-import com.loopers.domain.like.Like;
+import com.loopers.domain.like.LikeInfo;
 
 public record LikeResult(String userId, Long productId) {
 
-	public static LikeResult from(Like like) {
+	public static LikeResult from(final LikeInfo likeInfo) {
 
-		return new LikeResult(like.getUserId().getUserId(), like.getProductId().getProductId());
+		return new LikeResult(likeInfo.userId(), likeInfo.productId());
 	}
 
 }

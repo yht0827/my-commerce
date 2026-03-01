@@ -31,6 +31,21 @@ clients:
   pg-simulator:
     name: pgClient
     url: http://localhost:8082
+  data-platform:
+    name: dataPlatformClient
+    url: http://localhost:8083
+
+payments:
+  callback:
+    signature:
+      enabled: false
+      secret: ""
+      tolerance-seconds: 300
+
+cache:
+  version:
+    product: v1
+    brand: v1
 
 springdoc:
   use-fqn: true
@@ -41,7 +56,20 @@ springdoc:
 spring:
   config:
     activate:
-      on-profile: local, test
+      on-profile: local
+  jpa:
+    hibernate:
+      ddl-auto: none
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/schema/mysql/commerce-api-schema.sql
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
 
 ---
 spring:

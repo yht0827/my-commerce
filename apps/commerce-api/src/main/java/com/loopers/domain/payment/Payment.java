@@ -12,6 +12,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -49,6 +50,9 @@ public class Payment extends BaseEntity {
 
 	@Embedded
 	private PaymentReason reason;
+
+	@Version
+	private Long version;
 
 	@Builder
 	public Payment(OrderId orderId, UserId userId, CardType cardType, CardNo cardNo, Price amount, CallbackUrl callbackUrl,

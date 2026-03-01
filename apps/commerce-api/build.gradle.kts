@@ -2,10 +2,9 @@ dependencies {
     // add-ons
     implementation(project(":modules:jpa"))
     implementation(project(":modules:redis"))
-    implementation(project(":modules:cache"))
     implementation(project(":modules:kafka"))
-    implementation(project(":modules:feign"))
-    implementation(project(":modules:resilience"))
+    implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
+    implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j")
     implementation(project(":supports:jackson"))
     implementation(project(":supports:logging"))
     implementation(project(":supports:monitoring"))

@@ -32,6 +32,11 @@ public class PaymentRepositoryImpl implements PaymentRepository {
 	}
 
 	@Override
+	public Optional<Payment> findByTransactionKeyForUpdate(final String transactionKey) {
+		return paymentJpaRepository.findByTransactionKeyTransactionKeyForUpdate(transactionKey);
+	}
+
+	@Override
 	public List<Payment> findByStatus(final TransactionStatus status) {
 		return paymentJpaRepository.findByStatus(status);
 	}

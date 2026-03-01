@@ -1,10 +1,12 @@
 package com.loopers.domain.coupon;
 
+import static com.loopers.support.error.ErrorMessage.*;
+import static com.loopers.support.error.ErrorType.*;
+
 import java.io.Serializable;
 import java.time.ZonedDateTime;
 
 import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -22,11 +24,11 @@ public class CouponIssuedAt implements Serializable {
 	
 	public CouponIssuedAt(ZonedDateTime couponIssuedAt) {
 		if (couponIssuedAt == null) {
-			throw new CoreException(ErrorType.BAD_REQUEST, "쿠폰 발행일은 비어있을 수 없습니다.");
+			throw new CoreException(BAD_REQUEST, COUPON_ISSUED_AT_REQUIRED.format());
 		}
 
 		if (couponIssuedAt.isAfter(ZonedDateTime.now())) {
-			throw new CoreException(ErrorType.BAD_REQUEST, "쿠폰 발행일은 현재 시간보다 과거여야 합니다.");
+			throw new CoreException(BAD_REQUEST, COUPON_ISSUED_AT_INVALID.format());
 		}
 		this.couponIssuedAt = couponIssuedAt;
 	}

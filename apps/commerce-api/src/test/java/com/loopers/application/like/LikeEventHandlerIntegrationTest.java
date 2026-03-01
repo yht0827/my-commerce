@@ -2,7 +2,6 @@ package com.loopers.application.like;
 
 import static org.awaitility.Awaitility.*;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 import java.time.Duration;
@@ -17,8 +16,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import com.loopers.domain.like.Like;
 import com.loopers.domain.like.LikeRepository;
 import com.loopers.domain.product.ProductAggregateService;
+import com.loopers.domain.product.ProductCacheInvalidationService;
 import com.loopers.domain.product.ProductId;
-import com.loopers.domain.product.ProductService;
 import com.loopers.domain.user.UserId;
 
 @SpringBootTest
@@ -26,7 +25,7 @@ import com.loopers.domain.user.UserId;
 class LikeEventHandlerIntegrationTest {
 
 	@Autowired
-	private LikeFacade likeFacade;
+	private LikeApplicationService likeApplicationService;
 
 	@Autowired
 	private LikeRepository likeRepository;
@@ -35,7 +34,7 @@ class LikeEventHandlerIntegrationTest {
 	private ProductAggregateService productAggregateService;
 
 	@MockitoSpyBean
-	private ProductService productService;
+	private ProductCacheInvalidationService productCacheInvalidationService;
 
 	@Test
 	@DisplayName("상품 좋아요 시 이벤트 핸들러가 정상적으로 처리되는지 확인")
@@ -44,19 +43,21 @@ class LikeEventHandlerIntegrationTest {
 		String userId = "yht0827";
 		Long productId = 100L;
 
-		given(productAggregateService.incrementLikeCount(productId)).willReturn(true);
+		doReturn(true).when(productAggregateService).incrementLikeCount(any(ProductId.class));
 
 		// When
-		likeFacade.likeProduct(userId, productId);
+		likeApplicationService.likeProduct(new LikeCommand.LikeProduct(userId, productId));
 
 		// Then - 비동기 이벤트 처리 대기
 		await()
-			.atMost(5, TimeUnit.SECONDS)
-			.pollInterval(Duration.ofMillis(50))
-			.untilAsserted(() -> {
-				verify(productAggregateService, times(1)).incrementLikeCount(productId);
-				verify(productService, times(1)).evictProductRelatedCaches(productId);
-			});
+				.atMost(5, TimeUnit.SECONDS)
+				.pollInterval(Duration.ofMillis(50))
+				.untilAsserted(() -> {
+					verify(productAggregateService, times(1))
+						.incrementLikeCount(argThat(pid -> pid != null && pid.getProductId().equals(productId)));
+					verify(productCacheInvalidationService, times(1))
+						.evictProductRelatedCaches(argThat(pid -> pid != null && pid.getProductId().equals(productId)));
+				});
 	}
 
 	@Test
@@ -66,19 +67,21 @@ class LikeEventHandlerIntegrationTest {
 		String userId = "yht0827";
 		Long productId = 100L;
 
-		given(productAggregateService.decrementLikeCount(productId)).willReturn(true);
+		doReturn(true).when(productAggregateService).decrementLikeCount(any(ProductId.class));
 
 		// When
-		likeFacade.unlikeProduct(userId, productId);
+		likeApplicationService.unlikeProduct(new LikeCommand.UnlikeProduct(userId, productId));
 
 		// Then - 비동기 이벤트 처리 대기
 		await()
-			.atMost(5, TimeUnit.SECONDS)
-			.pollInterval(Duration.ofMillis(50))
-			.untilAsserted(() -> {
-				verify(productAggregateService, times(1)).decrementLikeCount(productId);
-				verify(productService, times(1)).evictProductRelatedCaches(productId);
-			});
+				.atMost(5, TimeUnit.SECONDS)
+				.pollInterval(Duration.ofMillis(50))
+				.untilAsserted(() -> {
+					verify(productAggregateService, times(1))
+						.decrementLikeCount(argThat(pid -> pid != null && pid.getProductId().equals(productId)));
+					verify(productCacheInvalidationService, times(1))
+						.evictProductRelatedCaches(argThat(pid -> pid != null && pid.getProductId().equals(productId)));
+				});
 	}
 
 	@Test
@@ -89,25 +92,26 @@ class LikeEventHandlerIntegrationTest {
 		Long productId = 200L;
 
 		// 첫 번째 호출은 실패, 두 번째 호출은 성공
-		given(productAggregateService.incrementLikeCount(productId))
-			.willReturn(false)  // 첫 번째 호출 실패
-			.willReturn(true);  // 재시도 호출 성공
+		doReturn(false, true).when(productAggregateService).incrementLikeCount(any(ProductId.class));
 
 		// When
-		likeFacade.likeProduct(userId, productId);
+		likeApplicationService.likeProduct(new LikeCommand.LikeProduct(userId, productId));
 
 		// Then - 비동기 이벤트 처리 대기
 		await()
 			.atMost(5, TimeUnit.SECONDS)
-			.pollInterval(Duration.ofMillis(50))
-			.untilAsserted(() -> {
-				// createIfNotExists가 호출되었는지 확인
-				verify(productAggregateService, times(1)).createIfNotExists(productId);
-				// incrementLikeCount가 2번 호출되었는지 확인 (실패 + 재시도)
-				verify(productAggregateService, times(2)).incrementLikeCount(productId);
-				// 캐시 무효화가 호출되었는지 확인
-				verify(productService, times(1)).evictProductRelatedCaches(productId);
-			});
+				.pollInterval(Duration.ofMillis(50))
+				.untilAsserted(() -> {
+					// createIfNotExists가 호출되었는지 확인
+					verify(productAggregateService, times(1))
+						.createIfNotExists(argThat(pid -> pid != null && pid.getProductId().equals(productId)));
+					// incrementLikeCount가 2번 호출되었는지 확인 (실패 + 재시도)
+					verify(productAggregateService, times(2))
+						.incrementLikeCount(argThat(pid -> pid != null && pid.getProductId().equals(productId)));
+					// 캐시 무효화가 호출되었는지 확인
+					verify(productCacheInvalidationService, times(1))
+						.evictProductRelatedCaches(argThat(pid -> pid != null && pid.getProductId().equals(productId)));
+				});
 	}
 
 	@Test
@@ -117,22 +121,48 @@ class LikeEventHandlerIntegrationTest {
 		String userId = "yht0827";
 		Long productId = 300L;
 
-		Like like = new Like(UserId.of(userId), ProductId.of(productId));
+		Like like = Like.create(UserId.of(userId), ProductId.of(productId));
 		likeRepository.save(like);
 
-		given(productAggregateService.decrementLikeCount(productId)).willReturn(false);
+		doReturn(false).when(productAggregateService).decrementLikeCount(any(ProductId.class));
 
 		// When
-		likeFacade.unlikeProduct(userId, productId);
+		likeApplicationService.unlikeProduct(new LikeCommand.UnlikeProduct(userId, productId));
+
+		// Then - 비동기 이벤트 처리 대기
+		await()
+				.atMost(5, TimeUnit.SECONDS)
+				.pollInterval(Duration.ofMillis(50))
+				.untilAsserted(() -> {
+					verify(productAggregateService, times(1))
+						.decrementLikeCount(argThat(pid -> pid != null && pid.getProductId().equals(productId)));
+					// 실패했으므로 캐시 무효화가 호출되지 않아야 함
+					verify(productCacheInvalidationService, times(0)).evictProductRelatedCaches(any(ProductId.class));
+				});
+	}
+
+	@Test
+	@DisplayName("좋아요 수 업데이트가 재시도까지 실패하면 캐시 무효화가 호출되지 않는지 확인")
+	void testLikeProductFailureAfterRetry() {
+		// Given
+		String userId = "yht0827";
+		Long productId = 400L;
+
+		doReturn(false, false).when(productAggregateService).incrementLikeCount(any(ProductId.class));
+
+		// When
+		likeApplicationService.likeProduct(new LikeCommand.LikeProduct(userId, productId));
 
 		// Then - 비동기 이벤트 처리 대기
 		await()
 			.atMost(5, TimeUnit.SECONDS)
 			.pollInterval(Duration.ofMillis(50))
 			.untilAsserted(() -> {
-				verify(productAggregateService, times(1)).decrementLikeCount(productId);
-				// 실패했으므로 캐시 무효화가 호출되지 않아야 함
-				verify(productService, times(0)).evictProductRelatedCaches(anyLong());
+				verify(productAggregateService, times(1))
+					.createIfNotExists(argThat(pid -> pid != null && pid.getProductId().equals(productId)));
+				verify(productAggregateService, times(2))
+					.incrementLikeCount(argThat(pid -> pid != null && pid.getProductId().equals(productId)));
+				verify(productCacheInvalidationService, times(0)).evictProductRelatedCaches(any(ProductId.class));
 			});
 	}
 }

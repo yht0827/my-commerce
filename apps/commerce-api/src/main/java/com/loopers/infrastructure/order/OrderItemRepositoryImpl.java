@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import com.loopers.domain.order.OrderItem;
 import com.loopers.domain.order.OrderItemRepository;
+import com.loopers.domain.product.ProductId;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,11 +28,16 @@ public class OrderItemRepositoryImpl implements OrderItemRepository {
 
 	@Override
 	public List<OrderItem> findAllByOrderId(final String orderId) {
-		return orderItemJpaRepository.findAllByOrderIdIn(orderId);
+		return orderItemJpaRepository.findAllByOrderId(orderId);
 	}
 
 	@Override
 	public List<OrderItem> findAllByOrderIdIn(final List<String> orderIds) {
-		return orderItemJpaRepository.findAllByOrderIdIns(orderIds);
+		return orderItemJpaRepository.findAllByOrderIdIn(orderIds);
+	}
+
+	@Override
+	public long countConfirmedOrdersByProductId(final ProductId productId) {
+		return orderItemJpaRepository.countConfirmedOrdersByProductId(productId.getProductId());
 	}
 }

@@ -30,7 +30,14 @@ public record PaymentCommand() {
 	public record ProcessCallback(
 		String transactionKey,
 		TransactionStatus status,
-		String orderId
+		String orderId,
+		String callbackId,
+		String callbackTimestamp,
+		String callbackSignature,
+		String rawBody
 	) {
+		public PaymentData.ProcessCallback toData() {
+			return new PaymentData.ProcessCallback(transactionKey, status, orderId);
+		}
 	}
 }

@@ -14,29 +14,29 @@ public record OrderDto() {
 
 		public record OrderRequest(List<OrderItemRequest> items, Long couponId, CardType cardType, String cardNo,
 								   String callbackUrl) {
-			public OrderCommand.CreateOrder toCommand(final String userId) {
+			public OrderCommand.CreateOrder toCommand(final String userId, final String idempotencyKey) {
 				List<OrderCommand.OrderItemCommand> items = this.items.stream()
 					.map(OrderItemRequest::toCommand)
 					.toList();
 
-				return new OrderCommand.CreateOrder(userId, items, couponId, cardType, cardNo, callbackUrl);
+				return new OrderCommand.CreateOrder(userId, items, couponId, cardType, cardNo, callbackUrl, idempotencyKey);
 			}
 		}
 
-		public record OrderItemRequest(Long productId, Long quantity, Long price) {
+		public record OrderItemRequest(Long productId, Long quantity) {
 			public OrderCommand.OrderItemCommand toCommand() {
-				return new OrderCommand.OrderItemCommand(productId, quantity, price);
+				return new OrderCommand.OrderItemCommand(productId, quantity);
 			}
 		}
 
-		public record getOrdersRequest(String userId) {
-			public static OrderQuery.GetOrders toCommand(final String userId) {
+		public record GetOrdersRequest(String userId) {
+			public static OrderQuery.GetOrders toQuery(final String userId) {
 				return new OrderQuery.GetOrders(userId);
 			}
 		}
 
-		public record getOrderRequest(String userId, Long orderId) {
-			public static OrderQuery.GetOrder toCommand(final String userId, final Long orderId) {
+		public record GetOrderRequest(String userId, String orderId) {
+			public static OrderQuery.GetOrder toQuery(final String userId, final String orderId) {
 				return new OrderQuery.GetOrder(userId, orderId);
 			}
 		}

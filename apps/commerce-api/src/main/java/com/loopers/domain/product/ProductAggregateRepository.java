@@ -1,22 +1,20 @@
 package com.loopers.domain.product;
 
-import java.util.Optional;
+import java.util.List;
 
 public interface ProductAggregateRepository {
 
-	Optional<ProductAggregate> findByProductId(final Long productId);
+	boolean incrementLikeCount(final ProductId productId);
 
-	Optional<ProductAggregate> findByProductIdWithOptimisticLock(final Long productId);
+	boolean decrementLikeCount(final ProductId productId);
 
-	Optional<ProductAggregate> findByProductIdWithPessimisticLock(final Long productId);
+	boolean incrementOrderCount(final ProductId productId);
 
-	Optional<ProductAggregate> findById(final Long id);
+	boolean incrementViewCount(final ProductId productId);
 
-	ProductAggregate save(final ProductAggregate productAggregate);
+	List<ProductId> findAllProductIds();
 
-	boolean incrementLikeCount(final Long productId);
+	void replaceCounts(ProductId productId, long likeCount, long orderCount, long viewCount);
 
-	boolean decrementLikeCount(final Long productId);
-
-	boolean existsByProductId(final Long productId);
+	void createIfNotExists(final ProductId productId);
 }

@@ -11,34 +11,38 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.loopers.application.order.OrderCommand;
-import com.loopers.application.order.OrderFacade;
+import com.loopers.application.order.OrderApplicationService;
 import com.loopers.application.order.OrderQuery;
 import com.loopers.application.order.OrderResult;
-import com.loopers.interfaces.api.ApiResponse;
+import com.loopers.interfaces.api.common.ApiResponse;
+import com.loopers.interfaces.api.common.CurrentUserId;
 
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor
-public class OrderV1Controller {
+public class OrderV1Controller implements OrderV1ApiSpec {
 
-	private final OrderFacade orderFacade;
+	private final OrderApplicationService orderApplicationService;
 
 	@PostMapping
-	public ApiResponse<OrderDto.V1.OrderResponse> createOrder(@RequestHeader(value = "X-USER-ID") final String userId,
+	@Override
+	public ApiResponse<OrderDto.V1.OrderResponse> createOrder(@CurrentUserId final String userId,
+		@RequestHeader(value = "X-IDEMPOTENCY-KEY", required = false) final String idempotencyKey,
 		@RequestBody final OrderDto.V1.OrderRequest orderRequest) {
-		OrderCommand.CreateOrder command = orderRequest.toCommand(userId);
-		OrderResult orderResult = orderFacade.createOrder(command);
+		OrderCommand.CreateOrder command = orderRequest.toCommand(userId, idempotencyKey);
+		OrderResult orderResult = orderApplicationService.createOrder(command);
 		OrderDto.V1.OrderResponse orderResponse = OrderDto.V1.OrderResponse.from(orderResult);
 
 		return ApiResponse.success(orderResponse);
 	}
 
 	@GetMapping
-	public ApiResponse<List<OrderDto.V1.OrderResponse>> getOrders(@RequestHeader(value = "X-USER-ID") final String userId) {
-		OrderQuery.GetOrders command = OrderDto.V1.getOrdersRequest.toCommand(userId);
-		List<OrderResult> orderResults = orderFacade.getOrders(command);
+	@Override
+	public ApiResponse<List<OrderDto.V1.OrderResponse>> getOrders(@CurrentUserId final String userId) {
+		OrderQuery.GetOrders query = OrderDto.V1.GetOrdersRequest.toQuery(userId);
+		List<OrderResult> orderResults = orderApplicationService.getOrders(query);
 		List<OrderDto.V1.OrderResponse> responses = orderResults.stream()
 			.map(OrderDto.V1.OrderResponse::from)
 			.toList();
@@ -47,10 +51,11 @@ public class OrderV1Controller {
 	}
 
 	@GetMapping("/{orderId}")
-	public ApiResponse<OrderDto.V1.OrderResponse> getOrder(@RequestHeader(value = "X-USER-ID") final String userId,
-		@PathVariable Long orderId) {
-		OrderQuery.GetOrder command = OrderDto.V1.getOrderRequest.toCommand(userId, orderId);
-		OrderResult orderResult = orderFacade.getOrder(command);
+	@Override
+	public ApiResponse<OrderDto.V1.OrderResponse> getOrder(@CurrentUserId final String userId,
+		@PathVariable final String orderId) {
+		OrderQuery.GetOrder query = OrderDto.V1.GetOrderRequest.toQuery(userId, orderId);
+		OrderResult orderResult = orderApplicationService.getOrder(query);
 		OrderDto.V1.OrderResponse orderResponse = OrderDto.V1.OrderResponse.from(orderResult);
 		return ApiResponse.success(orderResponse);
 	}

@@ -1,4 +1,3 @@
-version: '3'
 services:
   mysql:
     image: mysql:8.0
@@ -10,7 +9,7 @@ services:
       - MYSQL_PASSWORD=application
       - MYSQL_DATABASE=loopers
       - MYSQL_CHARACTER_SET=utf8mb4
-      - MYSQL_COLLATE=utf8mb4_general_ci
+      - MYSQL_COLLATE=utf8mb4_0900_ai_ci
     volumes:
       - mysql-8-data:/var/lib/mysql
 
@@ -24,14 +23,13 @@ services:
       - MYSQL_PASSWORD=application
       - MYSQL_DATABASE=paymentgateway
       - MYSQL_CHARACTER_SET=utf8mb4
-      - MYSQL_COLLATE=utf8mb4_general_ci
+      - MYSQL_COLLATE=utf8mb4_0900_ai_ci
     volumes:
       - pg-simulator-data:/var/lib/mysql
 
 
   redis-master:
     image: redis:7.0
-    container_name: redis-master
     ports:
       - "6379:6379"
     volumes:
@@ -51,7 +49,6 @@ services:
 
   redis-readonly:
     image: redis:7.0
-    container_name: redis-readonly
     depends_on:
       redis-master:
         condition: service_healthy
@@ -76,7 +73,6 @@ services:
 
   kafka:
     image: bitnami/kafka:3.5.1
-    container_name: kafka
     ports:
       - "9092:9092" # 카프카 브로커 PORT
       - "19092:19092" # 호스트 리스너 얘 떄문인가
@@ -102,7 +98,6 @@ services:
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
-    container_name: kafka-ui
     depends_on:
       kafka:
         condition: service_healthy

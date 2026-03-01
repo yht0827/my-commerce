@@ -1,11 +1,11 @@
 package com.loopers.infrastructure.product;
 
-import java.util.Optional;
+import java.util.List;
 
 import org.springframework.stereotype.Repository;
 
-import com.loopers.domain.product.ProductAggregate;
 import com.loopers.domain.product.ProductAggregateRepository;
+import com.loopers.domain.product.ProductId;
 
 import lombok.RequiredArgsConstructor;
 
@@ -16,45 +16,43 @@ public class ProductAggregateRepositoryImpl implements ProductAggregateRepositor
 	private final ProductAggregateJpaRepository productAggregateJpaRepository;
 
 	@Override
-	public Optional<ProductAggregate> findByProductId(final Long productId) {
-		return productAggregateJpaRepository.findByProductId(productId);
-	}
-
-	@Override
-	public Optional<ProductAggregate> findByProductIdWithOptimisticLock(final Long productId) {
-		return productAggregateJpaRepository.findByIdWithOptimisticLock(productId);
-	}
-
-	@Override
-	public Optional<ProductAggregate> findByProductIdWithPessimisticLock(final Long productId) {
-		return productAggregateJpaRepository.findByIdWithPessimisticLock(productId);
-	}
-
-	@Override
-	public Optional<ProductAggregate> findById(final Long id) {
-		return productAggregateJpaRepository.findById(id);
-	}
-
-	@Override
-	public ProductAggregate save(final ProductAggregate productAggregate) {
-		return productAggregateJpaRepository.save(productAggregate);
-	}
-
-	@Override
-	public boolean incrementLikeCount(final Long productId) {
-		int updatedCount = productAggregateJpaRepository.incrementLikeCount(productId);
+	public boolean incrementLikeCount(final ProductId productId) {
+		int updatedCount = productAggregateJpaRepository.incrementLikeCount(productId.getProductId());
 		return updatedCount > 0;
 	}
 
 	@Override
-	public boolean decrementLikeCount(final Long productId) {
-		int updatedCount = productAggregateJpaRepository.decrementLikeCount(productId);
+	public boolean decrementLikeCount(final ProductId productId) {
+		int updatedCount = productAggregateJpaRepository.decrementLikeCount(productId.getProductId());
 		return updatedCount > 0;
 	}
 
 	@Override
-	public boolean existsByProductId(final Long productId) {
-		return productAggregateJpaRepository.existsByProductId(productId);
+	public boolean incrementOrderCount(final ProductId productId) {
+		int updatedCount = productAggregateJpaRepository.incrementOrderCount(productId.getProductId());
+		return updatedCount > 0;
 	}
 
+	@Override
+	public boolean incrementViewCount(final ProductId productId) {
+		int updatedCount = productAggregateJpaRepository.incrementViewCount(productId.getProductId());
+		return updatedCount > 0;
+	}
+
+	@Override
+	public List<ProductId> findAllProductIds() {
+		return productAggregateJpaRepository.findAllProductIds().stream()
+			.map(ProductId::of)
+			.toList();
+	}
+
+	@Override
+	public void replaceCounts(final ProductId productId, final long likeCount, final long orderCount, final long viewCount) {
+		productAggregateJpaRepository.replaceCounts(productId.getProductId(), likeCount, orderCount, viewCount);
+	}
+
+	@Override
+	public void createIfNotExists(final ProductId productId) {
+		productAggregateJpaRepository.createIfNotExists(productId.getProductId());
+	}
 }

@@ -2,6 +2,7 @@ package com.loopers.domain.payment;
 
 import com.loopers.domain.order.OrderId;
 import com.loopers.domain.common.Price;
+import com.loopers.domain.user.UserId;
 
 public record PaymentData(
 	String userId, String orderId, CardType cardType, String cardNo, Long amount,
@@ -12,6 +13,7 @@ public record PaymentData(
 
 		public Payment toEntity() {
 			return Payment.builder()
+				.userId(new UserId(userId))
 				.orderId(new OrderId(orderId))
 				.cardType(cardType)
 				.cardNo(new CardNo(cardNo))
@@ -22,5 +24,12 @@ public record PaymentData(
 				.build();
 		}
 
+	}
+
+	public record ProcessCallback(
+		String transactionKey,
+		TransactionStatus status,
+		String orderId
+	) {
 	}
 }

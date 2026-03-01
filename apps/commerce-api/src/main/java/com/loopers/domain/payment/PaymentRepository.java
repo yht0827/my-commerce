@@ -11,5 +11,7 @@ public interface PaymentRepository {
 
 	Optional<Payment> findByTransactionKey(final String transactionKey);
 
+	Optional<Payment> findByTransactionKeyForUpdate(final String transactionKey);
+
 	List<Payment> findByStatus(final TransactionStatus status);
 }

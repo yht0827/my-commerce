@@ -14,7 +14,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import com.loopers.domain.point.Balance;
 import com.loopers.domain.point.Point;
+import com.loopers.domain.point.PointHistoryType;
 import com.loopers.domain.user.UserId;
+import com.loopers.infrastructure.point.PointHistoryJpaRepository;
 import com.loopers.infrastructure.point.PointJpaRepository;
 import com.loopers.support.error.CoreException;
 import com.loopers.utils.DatabaseCleanUp;
@@ -24,10 +26,13 @@ import com.loopers.utils.DatabaseCleanUp;
 public class PointIntegrationTest {
 
 	@Autowired
-	private PointService pointService;
+	private PointApplicationService pointApplicationService;
 
 	@Autowired
 	private PointJpaRepository pointJpaRepository;
+
+	@Autowired
+	private PointHistoryJpaRepository pointHistoryJpaRepository;
 
 	@Autowired
 	private DatabaseCleanUp databaseCleanUp;
@@ -62,7 +67,7 @@ public class PointIntegrationTest {
 			GetPointQuery query = GetPointQuery.of(TEST_USER_ID);
 
 			// act
-			PointResult result = pointService.getPoint(query);
+			PointResult result = pointApplicationService.getPoint(query);
 
 			// assert
 			assertThat(result).isNotNull();
@@ -78,7 +83,7 @@ public class PointIntegrationTest {
 			GetPointQuery query = GetPointQuery.of(nonExistentUserId);
 
 			// act and assert
-			assertThrows(CoreException.class, () -> pointService.getPoint(query));
+			assertThrows(CoreException.class, () -> pointApplicationService.getPoint(query));
 		}
 	}
 
@@ -96,12 +101,16 @@ public class PointIntegrationTest {
 			ChargePointCommand command = new ChargePointCommand(TEST_USER_ID, CHARGE_AMOUNT);
 
 			// act
-			PointResult result = pointService.chargePoint(command);
+			PointResult result = pointApplicationService.chargePoint(command);
 
 			// assert
 			assertThat(result).isNotNull();
 			assertThat(result.userId()).isEqualTo(TEST_USER_ID);
 			assertThat(result.balance()).isEqualByComparingTo(INITIAL_AMOUNT.add(CHARGE_AMOUNT));
+			var histories = pointHistoryJpaRepository.findAllByUserIdOrderByCreatedAtDesc(UserId.of(TEST_USER_ID));
+			assertThat(histories.size()).isEqualTo(1);
+			assertThat(histories.getFirst().getType()).isEqualTo(PointHistoryType.CHARGE);
+			assertThat(histories.getFirst().getAmount().getBalance()).isEqualByComparingTo(CHARGE_AMOUNT);
 		}
 
 		@DisplayName("존재하지 않는 유저 ID로 충전을 시도한 경우, 예외가 발생한다.")
@@ -112,7 +121,7 @@ public class PointIntegrationTest {
 			ChargePointCommand command = new ChargePointCommand(nonExistentUserId, CHARGE_AMOUNT);
 
 			// act and assert
-			assertThrows(CoreException.class, () -> pointService.chargePoint(command));
+			assertThrows(CoreException.class, () -> pointApplicationService.chargePoint(command));
 		}
 
 		@DisplayName("여러 번 충전할 경우, 포인트가 누적된다.")
@@ -126,12 +135,14 @@ public class PointIntegrationTest {
 			ChargePointCommand secondCommand = new ChargePointCommand(TEST_USER_ID, CHARGE_AMOUNT);
 
 			// act
-			pointService.chargePoint(firstCommand);
-			PointResult result = pointService.chargePoint(secondCommand);
+			pointApplicationService.chargePoint(firstCommand);
+			PointResult result = pointApplicationService.chargePoint(secondCommand);
 
 			// assert
 			BigDecimal expectedAmount = INITIAL_AMOUNT.add(CHARGE_AMOUNT).add(CHARGE_AMOUNT);
 			assertThat(result.balance()).isEqualByComparingTo(expectedAmount);
+			var histories = pointHistoryJpaRepository.findAllByUserIdOrderByCreatedAtDesc(UserId.of(TEST_USER_ID));
+			assertThat(histories.size()).isEqualTo(2);
 		}
 	}
 }

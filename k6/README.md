@@ -53,6 +53,15 @@ k6 run k6/tests/stress/comprehensive-stress-test.js
 - 실제 사용자 패턴 모방
 - 복합 시나리오 포함
 
+### 5. Order Lock Benchmark
+```bash
+k6 run k6/tests/load/order-lock-low-contention.js
+k6 run k6/tests/stress/order-lock-medium-contention.js
+k6 run k6/tests/stress/order-lock-high-contention.js
+```
+- 주문 경합 시나리오 기반 락 전략 비교용
+- 상세 가이드: `k6/ORDER_LOCK_BENCHMARK.md`
+
 ## 성능 임계값
 
 ### Load Test (PERFORMANCE_THRESHOLDS)

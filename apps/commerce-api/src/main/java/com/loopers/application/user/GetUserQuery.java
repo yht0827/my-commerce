@@ -5,4 +5,3 @@ public record GetUserQuery(String userId) {
         return new GetUserQuery(userId);
     }
 }
-

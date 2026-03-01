@@ -2,22 +2,22 @@ package com.loopers.application.ranking;
 
 import java.util.List;
 
-import org.springframework.data.domain.Page;
-
-import com.loopers.domain.rank.RankingItem;
+import com.loopers.domain.ranking.RankingInfo;
 
 public record RankingPageResult(
 	int page, int size, long totalElements, int totalPages,
 	List<RankingProductResult> items
 ) {
-	public static RankingPageResult from(Page<RankingItem> pageData, List<RankingProductResult> items) {
+	public static RankingPageResult from(
+		final RankingInfo.RankingPage pageData,
+		final List<RankingProductResult> items
+	) {
 
 		return new RankingPageResult(
-			pageData.getNumber(), pageData.getSize(),
-			pageData.getTotalElements(), pageData.getTotalPages(),
+			pageData.page(), pageData.size(),
+			pageData.totalElements(), pageData.totalPages(),
 			items
 		);
 
 	}
 }
-

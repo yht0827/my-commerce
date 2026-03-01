@@ -1,9 +1,11 @@
 package com.loopers.domain.coupon;
 
+import static com.loopers.support.error.ErrorMessage.*;
+import static com.loopers.support.error.ErrorType.*;
+
 import java.io.Serializable;
 
 import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -21,7 +23,7 @@ public class CouponName implements Serializable {
 	
 	public CouponName(String couponName) {
 		if (couponName == null || couponName.isBlank()) {
-			throw new CoreException(ErrorType.BAD_REQUEST, "쿠폰 이름은 비어있을 수 없습니다.");
+			throw new CoreException(BAD_REQUEST, COUPON_NAME_REQUIRED.format());
 		}
 		this.couponName = couponName;
 	}

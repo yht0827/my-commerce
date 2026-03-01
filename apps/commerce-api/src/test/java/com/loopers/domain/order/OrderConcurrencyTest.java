@@ -5,7 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.loopers.application.order.OrderFacade;
+import com.loopers.application.order.OrderApplicationService;
 import com.loopers.domain.coupon.Coupon;
 import com.loopers.domain.point.Point;
 import com.loopers.domain.product.Product;
@@ -23,7 +23,7 @@ import com.loopers.infrastructure.product.ProductJpaRepository;
 public class OrderConcurrencyTest {
 
 	@Autowired
-	private OrderFacade orderFacade;
+	private OrderApplicationService orderApplicationService;
 
 	@Autowired
 	private OrderService orderService;
@@ -76,7 +76,7 @@ public class OrderConcurrencyTest {
 		ZonedDateTime randomExpiredAt = ZonedDateTime.now().plusDays(daysInFuture);
 
 		coupon = new Coupon(new UserId("yht0827"), new ProductId(1L), new BrandId(1L),
-			new CouponName("쿠폰1"), new DiscountValue(100L), new MaxDisCountAmount(0L), CouponType.FIXED_AMOUNT,
+			new CouponName("쿠폰1"), new DiscountValue(100L), new MaxDiscountAmount(0L), CouponType.FIXED_AMOUNT,
 			new CouponIssuedAt(randomIssuedAt), new CouponUsedAt(ZonedDateTime.now()),
 			new CouponExpiredAt(randomExpiredAt), CouponStatus.ACTIVE);
 

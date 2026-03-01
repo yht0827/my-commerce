@@ -9,10 +9,12 @@ import java.util.regex.Pattern;
 import com.loopers.support.error.CoreException;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Embeddable;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+@Embeddable
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Email implements Serializable {
@@ -27,10 +29,11 @@ public class Email implements Serializable {
 		if (email == null || email.isBlank()) {
 			throw new CoreException(BAD_REQUEST, USER_EMAIL_REQUIRED.getMessage());
 		}
-		if (!EMAIL_PATTERN.matcher(email.trim()).matches()) {
+		String normalizedEmail = email.trim();
+		if (!EMAIL_PATTERN.matcher(normalizedEmail).matches()) {
 			throw new CoreException(BAD_REQUEST, EMAIL_INVALID_FORMAT.getMessage());
 		}
-		this.email = email;
+		this.email = normalizedEmail;
 	}
 
 	public static Email of(String email) {

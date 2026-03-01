@@ -3,6 +3,10 @@
     <springProfile name="local,local-dev,test">
         <include resource="appenders/plain-console-appender.xml"/>
         <logger name="com.loopers" level="DEBUG"/>
+        <logger name="org.hibernate.SQL" level="OFF"/>
+        <logger name="org.hibernate.orm.jdbc.bind" level="OFF"/>
+        <logger name="org.hibernate.orm.jdbc.extract" level="OFF"/>
+        <logger name="com.loopers.interfaces.scheduler.outbox" level="WARN"/>
         <root level="INFO">
             <appender-ref ref="CONSOLE"/>
         </root>

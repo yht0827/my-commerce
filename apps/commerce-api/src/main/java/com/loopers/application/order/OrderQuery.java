@@ -12,7 +12,7 @@ public record OrderQuery() {
 
 	}
 
-	public record GetOrder(String userId, Long orderId) {
+	public record GetOrder(String userId, String orderId) {
 		public OrderData.GetOrder toData() {
 			return new OrderData.GetOrder(userId, orderId);
 		}

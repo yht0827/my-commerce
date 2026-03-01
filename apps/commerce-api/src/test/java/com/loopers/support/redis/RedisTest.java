@@ -49,7 +49,7 @@ public class RedisTest {
 			.userId(new UserId("testuser1"))
 			.email(new Email("hong@example.com"))
 			.birthday(new Birthday("1990-01-01"))
-			.gender(Gender.M)
+			.gender(Gender.MALE)
 			.build();
 
 		redisTemplate.opsForValue().set("user:1", user);
@@ -66,7 +66,7 @@ public class RedisTest {
 			.userId(new UserId("testuser2"))
 			.email(new Email("hong@example.com"))
 			.birthday(new Birthday("1990-01-01"))
-			.gender(Gender.M)
+			.gender(Gender.MALE)
 			.build();
 
 		redisTemplate.opsForValue().set("user:deserialize", originalUser);
@@ -82,7 +82,7 @@ public class RedisTest {
 			assertThat(user.getEmail().getEmail()).isEqualTo("hong@example.com");
 			assertThat(user.getUserId().getUserId()).isEqualTo("testuser2");
 			assertThat(user.getBirthday().getBirthday()).isEqualTo("1990-01-01");
-			assertThat(user.getGender().name()).isEqualTo("M");
+			assertThat(user.getGender().name()).isEqualTo("MALE");
 		}
 	}
 
@@ -93,14 +93,14 @@ public class RedisTest {
 			.userId(new UserId("testuser1"))
 			.email(new Email("hong@example.com"))
 			.birthday(new Birthday("1990-01-01"))
-			.gender(Gender.M)
+			.gender(Gender.MALE)
 			.build();
 
 		User user2 = User.create()
 			.userId(new UserId("testuser2"))
 			.email(new Email("lee@example.com"))
 			.birthday(new Birthday("1988-03-20"))
-			.gender(Gender.F)
+			.gender(Gender.FEMALE)
 			.build();
 
 		redisTemplate.opsForHash().put("users", "user1", user1);

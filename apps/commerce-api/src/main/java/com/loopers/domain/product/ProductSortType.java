@@ -15,7 +15,9 @@ import lombok.RequiredArgsConstructor;
 public enum ProductSortType {
 	LATEST("latest", Sort.by("createdAt").descending()),
 	PRICE_ASC("price_asc", Sort.by("price").ascending()),
-	LIKES_DESC("likes_desc", Sort.by("likesCount").descending());
+	LIKES_DESC("likes_desc", Sort.by("likesCount").descending()),
+	ORDERS_DESC("orders_desc", Sort.by("orderCount").descending()),
+	VIEWS_DESC("views_desc", Sort.by("viewCount").descending());
 
 	private final String requestValue;
 	private final Sort sort;

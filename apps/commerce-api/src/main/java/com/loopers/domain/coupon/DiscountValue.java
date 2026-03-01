@@ -1,9 +1,13 @@
 package com.loopers.domain.coupon;
 
+import static com.loopers.support.error.ErrorMessage.*;
+import static com.loopers.support.error.ErrorType.*;
+
 import java.io.Serializable;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 import com.loopers.support.error.CoreException;
-import com.loopers.support.error.ErrorType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -21,7 +25,7 @@ public class DiscountValue implements Serializable {
 
 	public DiscountValue(Long discountValue) {
 		if (discountValue == null || discountValue < 0) {
-			throw new CoreException(ErrorType.BAD_REQUEST, "할인 금액은 0 이상이어야 합니다.");
+			throw new CoreException(BAD_REQUEST, COUPON_DISCOUNT_VALUE_INVALID.format());
 		}
 		this.discountValue = discountValue;
 	}
@@ -31,7 +35,10 @@ public class DiscountValue implements Serializable {
 	}
 
 	public Long calculatePercentageDiscount(Long amount) {
-		return (long)(amount * (discountValue / 100.0));
+		BigDecimal discountAmount = BigDecimal.valueOf(amount)
+			.multiply(BigDecimal.valueOf(discountValue))
+			.divide(BigDecimal.valueOf(100), 0, RoundingMode.DOWN);
+		return discountAmount.longValue();
 	}
 
 }

@@ -62,7 +62,9 @@ public class BrandsInserter {
 			String createTableSQL = """
 				CREATE TABLE IF NOT EXISTS brands (
 				    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-				    brand_name VARCHAR(255) NOT NULL UNIQUE,
+				    name VARCHAR(100) NOT NULL,
+				    description VARCHAR(500) NULL,
+				    logo_url VARCHAR(500) NULL,
 				    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 				    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 				    deleted_at TIMESTAMP NULL
@@ -127,7 +129,7 @@ public class BrandsInserter {
 			INTO TABLE brands 
 			FIELDS TERMINATED BY ',' 
 			LINES TERMINATED BY '\\n'
-			(brand_name, created_at, updated_at)
+			(name, created_at, updated_at)
 			""", csvFilePath);
 
 		long startTime = System.currentTimeMillis();
@@ -144,7 +146,7 @@ public class BrandsInserter {
 	}
 
 	private static void batchInsertBrands(Connection conn, int recordCount) throws SQLException {
-		String sql = "INSERT INTO brands (brand_name, created_at, updated_at) VALUES (?, ?, ?)";
+		String sql = "INSERT INTO brands (name, created_at, updated_at) VALUES (?, ?, ?)";
 		int batchSize = 10000;
 		Random random = new Random();
 
@@ -183,7 +185,7 @@ public class BrandsInserter {
 				System.out.printf("📊 brands 총 레코드: %,d건%n", rs.getLong(1));
 			}
 
-			rs = stmt.executeQuery("SELECT id, brand_name FROM brands ORDER BY id LIMIT 5");
+			rs = stmt.executeQuery("SELECT id, name FROM brands ORDER BY id LIMIT 5");
 			System.out.println("📋 brands 샘플 데이터:");
 			while (rs.next()) {
 				System.out.printf("  ID: %d, 브랜드: %s%n", rs.getLong(1), rs.getString(2));
