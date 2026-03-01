@@ -21,6 +21,11 @@ import com.loopers.domain.payment.CardType;
 import com.loopers.domain.payment.PaymentInfo;
 import com.loopers.domain.payment.TransactionStatus;
 import com.loopers.application.platform.DataPlatformApplicationService;
+import com.loopers.domain.point.PointService;
+import com.loopers.domain.product.ProductCacheInvalidationService;
+import com.loopers.domain.product.ProductStockService;
+import com.loopers.domain.coupon.CouponService;
+import com.loopers.support.event.EventPublisher;
 
 @DisplayName("OutboxDispatcherService 테스트")
 class OutboxDispatcherServiceTest {
@@ -31,6 +36,11 @@ class OutboxDispatcherServiceTest {
 	private final PaymentResultOutboxService paymentResultOutboxService = mock(PaymentResultOutboxService.class);
 	private final OrderService orderService = mock(OrderService.class);
 	private final DataPlatformApplicationService dataPlatformApplicationService = mock(DataPlatformApplicationService.class);
+	private final EventPublisher eventPublisher = mock(EventPublisher.class);
+	private final ProductStockService productStockService = mock(ProductStockService.class);
+	private final ProductCacheInvalidationService productCacheInvalidationService = mock(ProductCacheInvalidationService.class);
+	private final PointService pointService = mock(PointService.class);
+	private final CouponService couponService = mock(CouponService.class);
 
 	private final OutboxDispatcherService outboxDispatcherService = new OutboxDispatcherService(
 		outboxService,
@@ -38,7 +48,12 @@ class OutboxDispatcherServiceTest {
 		paymentProcessor,
 		paymentResultOutboxService,
 		orderService,
-		dataPlatformApplicationService
+		dataPlatformApplicationService,
+		eventPublisher,
+		productStockService,
+		productCacheInvalidationService,
+		pointService,
+		couponService
 	);
 
 	@Test

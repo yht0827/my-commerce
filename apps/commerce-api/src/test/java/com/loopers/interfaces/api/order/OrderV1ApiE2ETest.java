@@ -42,7 +42,6 @@ import com.loopers.infrastructure.payment.PaymentJpaRepository;
 import com.loopers.infrastructure.point.PointHistoryJpaRepository;
 import com.loopers.infrastructure.point.PointJpaRepository;
 import com.loopers.infrastructure.product.ProductJpaRepository;
-import com.loopers.infrastructure.stock.StockJpaRepository;
 import com.loopers.infrastructure.user.UserJpaRepository;
 import com.loopers.interfaces.api.common.ApiResponse;
 
@@ -67,9 +66,6 @@ class OrderV1ApiE2ETest {
 
 	@Autowired
 	private OrderHistoryJpaRepository orderHistoryJpaRepository;
-
-	@Autowired
-	private StockJpaRepository stockJpaRepository;
 
 	@Autowired
 	private PointJpaRepository pointJpaRepository;
@@ -118,7 +114,6 @@ class OrderV1ApiE2ETest {
 		orderItemJpaRepository.deleteAllInBatch();
 		orderJpaRepository.deleteAllInBatch();
 		pointHistoryJpaRepository.deleteAllInBatch();
-		stockJpaRepository.deleteAllInBatch();
 		pointJpaRepository.deleteAllInBatch();
 		productJpaRepository.deleteAllInBatch();
 		brandJpaRepository.deleteAllInBatch();

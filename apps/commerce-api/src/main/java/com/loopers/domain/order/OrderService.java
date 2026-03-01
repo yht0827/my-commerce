@@ -82,6 +82,17 @@ public class OrderService {
 		return orderItemRepository.findAllByOrderId(orderId);
 	}
 
+	@Transactional(readOnly = true)
+	public OrderData.CompensationInfo getCompensationInfo(final String orderId) {
+		Order order = orderRepository.findByOrderNumber(orderId)
+			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "주문을 찾을 수 없습니다."));
+		return new OrderData.CompensationInfo(
+			order.getUserId().getUserId(),
+			order.getFinalPaymentAmount().getFinalPaymentAmount(),
+			order.getCouponId()
+		);
+	}
+
 	@Transactional
 	public void updateOrderStatus(final String orderId, final OrderStatus status) {
 		Order order = orderRepository.findByOrderNumber(orderId)

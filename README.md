@@ -6,24 +6,19 @@
 
 - [프로젝트 소개](#프로젝트-소개)
 - [기술 스택](#기술-스택)
+- [핵심 구현 포인트](#핵심-구현-포인트)
 - [시스템 아키텍처](#시스템-아키텍처)
 - [모듈 구조](#모듈-구조)
 - [설계 문서](#설계-문서)
 - [시작하기](#시작하기)
-- [학습 목표](#학습-목표)
 
 ---
 
 ## 프로젝트 소개
 
-멀티모듈 아키텍처로 구성한 E-Commerce 플랫폼입니다.
-DDD와 클린 아키텍처를 연습하기 위해 만들었습니다.
+DDD와 클린 아키텍처를 연습하기 위해 만든 멀티모듈 E-Commerce 플랫폼입니다.
 
-주요 특징:
-- 마이크로서비스 전환을 염두에 둔 모듈 분리
-- Redis 캐싱, Kafka 비동기 처리
-- Circuit Breaker 패턴 적용
-- Prometheus + Grafana 모니터링
+단순한 CRUD를 넘어 실제 서비스에서 마주치는 동시성, 트랜잭션 정합성, 성능 문제를 직접 설계하고 구현하는 데 초점을 맞췄습니다.
 
 ---
 
@@ -37,8 +32,70 @@ DDD와 클린 아키텍처를 연습하기 위해 만들었습니다.
 | Database | MySQL |
 | Cache | Redis |
 | Message Queue | Kafka |
-| Test | JUnit 5, AssertJ |
+| Test | JUnit 5, AssertJ, Testcontainers, Instancio |
+| Load Test | k6 |
 | Monitoring | Prometheus, Grafana |
+
+---
+
+## 핵심 구현 포인트
+
+### Outbox 패턴 기반 이벤트 분리
+
+주문 생성 트랜잭션 내에서 `PAYMENT_REQUEST`, `DATA_PLATFORM_DISPATCH` 이벤트를 Outbox 테이블에 원자적으로 적재합니다.
+스케줄러가 주기적으로 Dispatcher를 호출해 이벤트를 처리하며, 실패 시 자동 재시도합니다.
+
+```
+주문 생성 트랜잭션
+├── orders 저장
+└── event_outbox 적재 (PAYMENT_REQUEST, DATA_PLATFORM_DISPATCH)
+
+Outbox Dispatcher (스케줄러)
+├── PAYMENT_REQUEST     → PG 호출
+├── ORDER_STATUS_SYNC   → 주문 상태 CONFIRMED / CANCELLED
+└── DATA_PLATFORM_DISPATCH → 데이터 플랫폼 전송
+```
+
+### Saga 패턴 기반 보상 트랜잭션
+
+결제 실패(CANCELLED) 시 아래 순서로 독립 트랜잭션을 통해 보상을 수행합니다.
+
+```
+CANCELLED 감지
+└── restoreOnCancelled()
+    ├── 재고 복구 (Pessimistic Lock)
+    ├── 포인트 환불
+    └── 쿠폰 복원 (USED → ACTIVE)
+```
+
+### Redis Sorted Set 기반 실시간 랭킹
+
+조회·좋아요·주문에 가중치를 부여하고 시간 감쇠를 적용해 실시간 점수를 계산합니다.
+
+| 이벤트 | 가중치 |
+|--------|--------|
+| VIEW   | 0.1    |
+| LIKE   | 0.2    |
+| ORDER  | 0.6    |
+
+- 시간 감쇠: `e^(-0.1 × 경과시간(h))`
+- Redis 키: `ranking:daily:{yyyyMMdd}` (TTL 35일)
+- Redis 장애 시 Snapshot으로 Fallback
+
+### Spring Batch 기반 랭킹 집계
+
+| Job | 설명 |
+|-----|------|
+| `dailyRankingJob` | 일별 랭킹 집계 |
+| `weeklyRankingJob` | 주별 랭킹 집계 |
+| `monthlyRankingJob` | 월별 랭킹 집계 |
+| `dailyRankingRecoveryJob` | 장애 후 복구 집계 |
+
+### 동시성 제어
+
+- 재고 차감: Pessimistic Lock (SELECT FOR UPDATE)
+- 쿠폰 사용: Optimistic Lock (`@Version`)
+- 포인트 차감: Pessimistic Lock
 
 ---
 
@@ -53,15 +110,14 @@ DDD와 클린 아키텍처를 연습하기 위해 만들었습니다.
                 │              │              │
         ┌───────▼────┐  ┌──────▼──────┐  ┌───▼─────┐
         │   MySQL    │  │    Redis    │  │  Kafka  │
-        │ (Primary)  │  │ (Master/RO) │  │ (Events)│
-        └────────────┘  └─────────────┘  └─────────┘
+        │ (Primary)  │  │ (Cache/     │  │ (Events)│
+        └────────────┘  │  Ranking)   │  └─────────┘
+                        └─────────────┘
 ```
 
 ---
 
 ## 모듈 구조
-
-본 프로젝트는 멀티 모듈로 구성되어 있으며, 각 모듈의 역할과 규칙은 다음과 같습니다.
 
 | 계층 | 설명 |
 |------|------|
@@ -73,7 +129,7 @@ DDD와 클린 아키텍처를 연습하기 위해 만들었습니다.
 Root
 ├── apps ( spring-applications )
 │   ├── 📦 commerce-api        # REST API 서버
-│   ├── 📦 commerce-batch      # 배치 처리
+│   ├── 📦 commerce-batch      # 배치 처리 (랭킹 집계)
 │   ├── 📦 commerce-streamer   # 스트리밍 처리
 │   └── 📦 pg-simulator        # PG 시뮬레이터
 │
@@ -96,6 +152,7 @@ Root
 - [02 Sequence Diagrams](docs/02-sequence-diagrams.md)
 - [03 Class Diagrams](docs/03-class-diagrams.md)
 - [04 ERD](docs/04-erd.md)
+
 ---
 
 ## 시작하기
@@ -121,29 +178,17 @@ make up
 
 ### 모니터링 환경 (선택)
 
-Prometheus와 Grafana를 통한 모니터링 환경을 제공합니다.
-
 ```shell
 make monitor-up
 ```
 
-애플리케이션 실행 후 http://localhost:3000 에서 Grafana에 접속할 수 있습니다.
-- 계정: `admin` / `admin`
+애플리케이션 실행 후 아래 주소에서 접속할 수 있습니다.
 
-Prometheus: http://localhost:9091
+- Grafana: http://localhost:3000 (`admin` / `admin`)
+- Prometheus: http://localhost:9091
 
 종료:
 
 ```shell
 make down
 ```
-
----
-
-## 학습 목표
-
-- 테스트 자동화 및 TDD
-- 동시성 제어 (Pessimistic/Optimistic Lock)
-- 트랜잭션 관리 및 격리 수준
-- 캐싱 전략 (Local/Global Cache)
-- 이벤트 기반 비동기 처리 및 시스템 결합도 완화

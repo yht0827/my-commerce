@@ -69,4 +69,11 @@ public class Product extends BaseEntity {
 			this.status = ProductStatus.SOLD_OUT;
 		}
 	}
+
+	public void restore(final Quantity amount) {
+		this.quantity = this.quantity.add(amount);
+		if (this.status == ProductStatus.SOLD_OUT && !this.quantity.isOutOfStock()) {
+			this.status = ProductStatus.ON_SALE;
+		}
+	}
 }

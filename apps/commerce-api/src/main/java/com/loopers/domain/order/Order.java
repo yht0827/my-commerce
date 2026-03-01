@@ -7,6 +7,7 @@ import com.loopers.domain.user.UserId;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -38,17 +39,21 @@ public class Order extends BaseEntity {
 	@Embedded
 	private OrderNumber orderNumber;
 
+	@Column(name = "coupon_id")
+	private Long couponId;
+
 	@Enumerated(EnumType.STRING)
 	private OrderStatus status;
 
 	@Builder
 	public Order(UserId userId, TotalOrderPrice totalOrderPrice, CouponDiscountAmount couponDiscountAmount,
-		FinalPaymentAmount finalPaymentAmount, OrderNumber orderNumber, OrderStatus status) {
+		FinalPaymentAmount finalPaymentAmount, OrderNumber orderNumber, Long couponId, OrderStatus status) {
 		this.userId = userId;
 		this.totalOrderPrice = totalOrderPrice;
 		this.couponDiscountAmount = couponDiscountAmount;
 		this.finalPaymentAmount = finalPaymentAmount;
 		this.orderNumber = orderNumber;
+		this.couponId = couponId;
 		this.status = status;
 	}
 
@@ -65,6 +70,7 @@ public class Order extends BaseEntity {
 			.couponDiscountAmount(couponDiscountAmount)
 			.finalPaymentAmount(finalPaymentAmount)
 			.orderNumber(generateOrderNumber())
+			.couponId(data.couponId())
 			.status(OrderStatus.PENDING)
 			.build();
 	}

@@ -82,6 +82,10 @@ public class Coupon extends BaseEntity {
 		return discountPolicy.calculate(amount);
 	}
 
+	public void restore() {
+		this.couponStatus = CouponStatus.ACTIVE;
+	}
+
 	public CouponDiscountAmount applyDiscount(TotalOrderPrice totalOrderPrice) {
 		if (couponStatus == CouponStatus.USED) {
 			throw new CoreException(BAD_REQUEST, COUPON_ALREADY_USED.format());

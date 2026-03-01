@@ -154,21 +154,6 @@ CREATE TABLE IF NOT EXISTS likes
 ) DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_0900_ai_ci;
 
-CREATE TABLE IF NOT EXISTS stocks
-(
-    id         BIGINT      NOT NULL AUTO_INCREMENT,
-    product_id BIGINT      NOT NULL,
-    quantity   BIGINT      NOT NULL DEFAULT 0,
-    created_at DATETIME(6) NOT NULL,
-    updated_at DATETIME(6) NOT NULL,
-    deleted_at DATETIME(6) NULL,
-    PRIMARY KEY (id),
-    CONSTRAINT uk_stocks_product_id UNIQUE (product_id),
-    CONSTRAINT chk_stocks_quantity_non_negative CHECK (quantity >= 0),
-    CONSTRAINT fk_stocks_product_id FOREIGN KEY (product_id) REFERENCES products (id)
-) DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_0900_ai_ci;
-
 CREATE TABLE IF NOT EXISTS coupons
 (
     id                  BIGINT       NOT NULL AUTO_INCREMENT,
@@ -211,6 +196,7 @@ CREATE TABLE IF NOT EXISTS orders
     total_price            BIGINT      NOT NULL,
     coupon_discount_amount BIGINT      NOT NULL,
     final_payment_amount   BIGINT      NOT NULL,
+    coupon_id              BIGINT      NULL,
     order_number           VARCHAR(50) NOT NULL,
     status                 VARCHAR(20) NOT NULL,
     created_at             DATETIME(6) NOT NULL,

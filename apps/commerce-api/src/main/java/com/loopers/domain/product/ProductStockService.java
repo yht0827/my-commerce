@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import com.loopers.domain.common.Quantity;
 import com.loopers.domain.order.OrderData;
+import com.loopers.domain.order.OrderItem;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorMessage;
 import com.loopers.support.error.ErrorType;
@@ -22,6 +23,30 @@ import lombok.RequiredArgsConstructor;
 public class ProductStockService {
 
 	private final ProductRepository productRepository;
+
+	@Transactional
+	public void restoreStock(final List<OrderItem> orderItems) {
+		if (orderItems == null || orderItems.isEmpty()) {
+			return;
+		}
+
+		Map<Long, Quantity> quantityByProductId = new HashMap<>();
+		for (OrderItem orderItem : orderItems) {
+			quantityByProductId.merge(
+				orderItem.getProductId().getProductId(),
+				orderItem.getQuantity(),
+				Quantity::add
+			);
+		}
+
+		quantityByProductId.entrySet().stream()
+			.sorted(Map.Entry.comparingByKey())
+			.forEach(entry -> {
+				ProductId productId = ProductId.of(entry.getKey());
+				Product product = findProductWithPessimisticLock(productId);
+				product.restore(entry.getValue());
+			});
+	}
 
 	@Transactional
 	public List<ProductData.StockQuantityChanged> deductStock(final List<OrderData.OrderItemData> orderItems) {

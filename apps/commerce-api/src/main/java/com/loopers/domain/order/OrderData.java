@@ -15,4 +15,7 @@ public record OrderData() {
 
 	public record GetOrders(String userId) {
 	}
+
+	public record CompensationInfo(String userId, Long finalPaymentAmount, Long couponId) {
+	}
 }

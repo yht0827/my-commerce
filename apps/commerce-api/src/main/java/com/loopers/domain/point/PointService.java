@@ -4,6 +4,7 @@ import static com.loopers.support.error.ErrorMessage.*;
 import static com.loopers.support.error.ErrorType.*;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.loopers.domain.user.UserId;
 import com.loopers.support.error.CoreException;
@@ -31,6 +32,14 @@ public class PointService {
 		point.useBalance(amount);
 		pointHistoryRepository.save(PointHistory.use(userId, amount));
 
+		return point;
+	}
+
+	@Transactional
+	public Point refund(final UserId userId, final Balance amount) {
+		Point point = findByUserId(userId);
+		point.chargeBalance(amount);
+		pointHistoryRepository.save(PointHistory.charge(userId, amount));
 		return point;
 	}
 

@@ -5,11 +5,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import com.loopers.domain.common.Quantity;
 import com.loopers.domain.product.ProductCacheInvalidationService;
 import com.loopers.domain.product.ProductId;
 import com.loopers.domain.product.event.ProductQuantityChangedEvent;
-import com.loopers.domain.stock.StockService;
 import com.loopers.support.event.Envelope;
 
 import lombok.RequiredArgsConstructor;
@@ -21,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 public class ProductEventHandler {
 
 	private final ProductCacheInvalidationService productCacheInvalidationService;
-	private final StockService stockService;
 
 	@Async
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -34,11 +31,6 @@ public class ProductEventHandler {
 
 		try {
 			ProductId productId = ProductId.of(productQuantityChangedEvent.productId());
-
-			stockService.syncFromProductQuantity(
-				productId,
-				new Quantity(productQuantityChangedEvent.currentQuantity())
-			);
 			productCacheInvalidationService.evictProductRelatedCaches(productId);
 		} catch (Exception e) {
 			log.error(
