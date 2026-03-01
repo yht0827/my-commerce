@@ -97,7 +97,21 @@ subprojects {
             classDirectories.setFrom(
                 files(
                     classDirectories.files.map {
-                        fileTree(it)
+                        fileTree(it) {
+                            exclude(
+                                // DB 시딩 유틸리티 (비즈니스 로직 아님)
+                                "**/support/util/BrandsInserter*.class",
+                                "**/support/util/ProductsInserter*.class",
+                                "**/support/util/TableSpecificBulkInsert*.class",
+                                // QueryDSL 생성 클래스
+                                "**/Q*.class",
+                                // 도메인 이벤트 (단순 데이터 클래스)
+                                "**/domain/**/event/**",
+                                // Spring Boot 진입점
+                                "**/*Application.class",
+                                "**/*Application\$*.class",
+                            )
+                        }
                     },
                 ),
             )

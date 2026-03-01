@@ -17,6 +17,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.loopers.infrastructure.brand.BrandJpaRepository;
+import com.loopers.support.config.CacheVersionProperties;
 import com.loopers.utils.DatabaseCleanUp;
 import com.loopers.utils.RedisCleanUp;
 
@@ -40,6 +41,9 @@ public class BrandIntegrationTest {
 
 	@Autowired
 	private RedisCleanUp redisCleanUp;
+
+	@Autowired
+	private CacheVersionProperties cacheVersionProperties;
 
 	@MockitoSpyBean
 	private BrandRepository brandRepository;
@@ -81,7 +85,7 @@ public class BrandIntegrationTest {
 
 	private void setupTestData(List<Brand> testBrands) {
 		testBrand = testBrands.getFirst();
-		detailCacheKey = "brand:" + testBrand.getId();
+		detailCacheKey = cacheVersionProperties.brand() + ":brand:" + testBrand.getId();
 	}
 
 	@DisplayName("GET 요청")

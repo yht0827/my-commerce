@@ -29,6 +29,7 @@ import com.loopers.domain.brand.BrandName;
 import com.loopers.domain.common.Price;
 import com.loopers.domain.common.Quantity;
 import com.loopers.infrastructure.brand.BrandJpaRepository;
+import com.loopers.infrastructure.product.ProductCacheKeys;
 import com.loopers.infrastructure.product.ProductAggregateJpaRepository;
 import com.loopers.infrastructure.product.ProductJpaRepository;
 
@@ -55,6 +56,9 @@ class ProductListIntegrationTest {
 
 	@Autowired
 	private RedisTemplate<String, Object> redisTemplate;
+
+	@Autowired
+	private ProductCacheKeys productCacheKeys;
 
 	@MockitoSpyBean
 	private ProductRepository spyProductRepository;
@@ -191,9 +195,12 @@ class ProductListIntegrationTest {
 
 		assertThat(extractIds(firstPriceResult)).isNotEqualTo(extractIds(firstLikesResult));
 
-		Set<String> cacheKeys = redisTemplate.keys("productList:" + primaryBrandId.getBrandId() + ":0:3:*");
-		assertThat(cacheKeys).isNotNull();
-		assertThat(cacheKeys).hasSize(2);
+		String priceCacheKey = productCacheKeys.buildProductListKey(primaryBrandId, pricePageable);
+		String likesCacheKey = productCacheKeys.buildProductListKey(primaryBrandId, likesPageable);
+		assertThat(priceCacheKey).isNotEqualTo(likesCacheKey);
+
+		assertThat(redisTemplate.hasKey(priceCacheKey)).isTrue();
+		assertThat(redisTemplate.hasKey(likesCacheKey)).isTrue();
 	}
 
 	private Product saveProduct(final BrandId brandId, final String name, final Long price, final Long quantity) {

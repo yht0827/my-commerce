@@ -121,6 +121,27 @@ class PaymentApplicationServiceTest {
 	}
 
 	@Test
+	@DisplayName("결제 프로세서에서 예외 발생 시 Failure 결과를 반환한다")
+	void processOrderPaymentReturnsFailureWhenProcessorThrows() {
+		OrderCreatedEvent.PaymentMetadata metadata = OrderCreatedEvent.PaymentMetadata.of(
+			CardType.SAMSUNG,
+			"1234-5678-1234-5678",
+			"https://callback.example.com/payments"
+		);
+		OrderCreatedEvent orderEvent = OrderCreatedEvent.create("user1234", "ORD-1001", 10000L, metadata);
+
+		when(paymentProcessor.process(any(PaymentCommand.CreatePayment.class)))
+			.thenThrow(new RuntimeException("PG 연동 실패"));
+
+		PaymentResult result = paymentApplicationService.processOrderPayment(orderEvent);
+
+		assertThat(result).isInstanceOf(PaymentResult.Failure.class);
+		PaymentResult.Failure failure = (PaymentResult.Failure) result;
+		assertThat(failure.orderId()).isEqualTo("ORD-1001");
+		assertThat(failure.reason()).isEqualTo("PG 연동 실패");
+	}
+
+	@Test
 	@DisplayName("주문 이벤트 결제 처리 성공 시 Success 결과를 반환한다")
 	void processOrderPaymentReturnsSuccess() {
 		OrderCreatedEvent.PaymentMetadata metadata = OrderCreatedEvent.PaymentMetadata.of(

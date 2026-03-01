@@ -7,10 +7,10 @@ import static org.mockito.Mockito.*;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -49,24 +49,18 @@ class ProductQueryServiceSingleFlightTest {
 		Pageable pageable = PageRequest.of(0, 20, Sort.by("price").ascending());
 		ProductData.GetProductList query = new ProductData.GetProductList(brandId, pageable);
 
-		AtomicInteger cacheLookupCount = new AtomicInteger();
-		CompletableFuture<Void> secondLookupObserved = new CompletableFuture<>();
-
-		when(productCacheRepository.findProductList(eq(brandId), eq(pageable))).thenAnswer(invocation -> {
-			if (cacheLookupCount.incrementAndGet() >= 2) {
-				secondLookupObserved.complete(null);
-			}
-			return Optional.empty();
-		});
+		when(productCacheRepository.findProductList(eq(brandId), eq(pageable))).thenReturn(Optional.empty());
 
 		Page<ProductInfo> dbPage = new PageImpl<>(
 			List.of(new ProductInfo(1L, "product-1", 1000L, 10L, "brand-1", 0L, 0L, 0L)),
 			pageable,
 			1
 		);
+		CountDownLatch firstDbLoadStarted = new CountDownLatch(1);
 
 		when(productRepository.getProductList(eq(brandId), eq(pageable))).thenAnswer(invocation -> {
-			secondLookupObserved.get(2, TimeUnit.SECONDS);
+			firstDbLoadStarted.countDown();
+			Thread.sleep(300L);
 			return dbPage;
 		});
 
@@ -76,6 +70,8 @@ class ProductQueryServiceSingleFlightTest {
 				() -> productQueryService.getProductList(query),
 				executor
 			);
+			assertThat(firstDbLoadStarted.await(1, TimeUnit.SECONDS)).isTrue();
+
 			CompletableFuture<Page<ProductInfo>> second = CompletableFuture.supplyAsync(
 				() -> productQueryService.getProductList(query),
 				executor
@@ -99,20 +95,14 @@ class ProductQueryServiceSingleFlightTest {
 	void getProductDetail_singleFlightOnConcurrentMiss() throws Exception {
 		ProductId productId = ProductId.of(1L);
 
-		AtomicInteger cacheLookupCount = new AtomicInteger();
-		CompletableFuture<Void> secondLookupObserved = new CompletableFuture<>();
-
-		when(productCacheRepository.findProductDetail(eq(productId))).thenAnswer(invocation -> {
-			if (cacheLookupCount.incrementAndGet() >= 2) {
-				secondLookupObserved.complete(null);
-			}
-			return Optional.empty();
-		});
+		when(productCacheRepository.findProductDetail(eq(productId))).thenReturn(Optional.empty());
 
 		ProductInfo productInfo = new ProductInfo(1L, "product-1", 1000L, 10L, "brand-1", 0L, 0L, 0L);
+		CountDownLatch firstDbLoadStarted = new CountDownLatch(1);
 
 		when(productRepository.findById(eq(productId))).thenAnswer(invocation -> {
-			secondLookupObserved.get(2, TimeUnit.SECONDS);
+			firstDbLoadStarted.countDown();
+			Thread.sleep(300L);
 			return Optional.of(productInfo);
 		});
 
@@ -122,6 +112,8 @@ class ProductQueryServiceSingleFlightTest {
 				() -> productQueryService.getProductDetail(productId),
 				executor
 			);
+			assertThat(firstDbLoadStarted.await(1, TimeUnit.SECONDS)).isTrue();
+
 			CompletableFuture<ProductInfo> second = CompletableFuture.supplyAsync(
 				() -> productQueryService.getProductDetail(productId),
 				executor

@@ -32,5 +32,58 @@ public class PointTest {
 			// assert
 			assertThat(result.getErrorType()).isEqualTo(ErrorType.BAD_REQUEST);
 		}
+
+		@DisplayName("양수 잔액으로 포인트를 정상 생성한다.")
+		@Test
+		void createSuccessfullyWithPositiveBalance() {
+			// arrange
+			String userId = "yht0827";
+			BigDecimal balance = BigDecimal.valueOf(1000L);
+
+			// act
+			Point point = new Point(new UserId(userId), new Balance(balance));
+
+			// assert
+			assertThat(point.getUserId().getUserId()).isEqualTo(userId);
+			assertThat(point.getBalance().getBalance()).isEqualByComparingTo(balance);
+		}
+	}
+
+	@DisplayName("chargeBalance 메서드")
+	@Nested
+	class ChargeBalance {
+
+		@DisplayName("정상 충전 후 잔액이 증가한다.")
+		@Test
+		void chargeIncreasesBalance() {
+			// arrange
+			Point point = new Point(new UserId("yht0827"), new Balance(BigDecimal.valueOf(500)));
+			Balance chargeAmount = new Balance(BigDecimal.valueOf(300));
+
+			// act
+			point.chargeBalance(chargeAmount);
+
+			// assert
+			assertThat(point.getBalance().getBalance()).isEqualByComparingTo(BigDecimal.valueOf(800));
+		}
+	}
+
+	@DisplayName("useBalance 메서드")
+	@Nested
+	class UseBalance {
+
+		@DisplayName("정상 차감 후 잔액이 감소한다.")
+		@Test
+		void useDecreasesBalance() {
+			// arrange
+			Point point = new Point(new UserId("yht0827"), new Balance(BigDecimal.valueOf(1000)));
+			Balance useAmount = new Balance(BigDecimal.valueOf(400));
+
+			// act
+			point.useBalance(useAmount);
+
+			// assert
+			assertThat(point.getBalance().getBalance()).isEqualByComparingTo(BigDecimal.valueOf(600));
+		}
 	}
 }

@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
@@ -13,6 +14,8 @@ import com.loopers.application.payment.PaymentResultOutboxService;
 import com.loopers.application.payment.PaymentProcessor;
 import com.loopers.domain.order.OrderService;
 import com.loopers.domain.order.OrderStatus;
+import com.loopers.domain.order.OrderData;
+import com.loopers.domain.order.OrderItem;
 import com.loopers.domain.outbox.OutboxEvent;
 import com.loopers.domain.outbox.OutboxEventType;
 import com.loopers.domain.outbox.OutboxService;
@@ -21,7 +24,11 @@ import com.loopers.domain.payment.CardType;
 import com.loopers.domain.payment.PaymentInfo;
 import com.loopers.domain.payment.TransactionStatus;
 import com.loopers.application.platform.DataPlatformApplicationService;
+import com.loopers.domain.common.Price;
+import com.loopers.domain.common.Quantity;
+import com.loopers.domain.order.OrderId;
 import com.loopers.domain.point.PointService;
+import com.loopers.domain.product.ProductId;
 import com.loopers.domain.product.ProductCacheInvalidationService;
 import com.loopers.domain.product.ProductStockService;
 import com.loopers.domain.coupon.CouponService;
@@ -117,6 +124,137 @@ class OutboxDispatcherServiceTest {
 		verify(outboxService, times(1)).retry(eq(outboxEvent.getId()), contains("platform down"));
 	}
 
+	@Test
+	@DisplayName("claim 결과가 비어있으면 아무 작업도 수행하지 않는다")
+	void dispatchSingleEvent_doesNothingWhenClaimIsEmpty() {
+		when(outboxService.claim(100L)).thenReturn(Optional.empty());
+
+		outboxDispatcherService.dispatchSingleEvent(100L);
+
+		verify(outboxService, never()).complete(anyLong());
+		verify(outboxService, never()).retry(anyLong(), anyString());
+		verifyNoInteractions(outboxPayloadMapper, paymentProcessor, paymentResultOutboxService, orderService,
+			dataPlatformApplicationService, eventPublisher, productStockService, productCacheInvalidationService, pointService,
+			couponService);
+	}
+
+	@Test
+	@DisplayName("dispatchPendingEvents는 조회된 pending id를 순회해 dispatch한다")
+	void dispatchPendingEvents_dispatchesAllPendingIds() {
+		when(outboxService.findPendingEventIds(anyInt())).thenReturn(List.of(1L, 2L, 3L));
+		when(outboxService.claim(anyLong())).thenReturn(Optional.empty());
+
+		outboxDispatcherService.dispatchPendingEvents();
+
+		verify(outboxService).findPendingEventIds(anyInt());
+		verify(outboxService).claim(1L);
+		verify(outboxService).claim(2L);
+		verify(outboxService).claim(3L);
+	}
+
+	@Test
+	@DisplayName("DATA_PLATFORM_DISPATCH 성공 시 complete 처리한다")
+	void dispatchSingleEvent_completesWhenDataPlatformDispatchSucceeds() {
+		OutboxEvent outboxEvent = outboxEvent(OutboxEventType.DATA_PLATFORM_DISPATCH, "{dataPlatform}");
+		OutboxPayload.DataPlatformDispatch payload = new OutboxPayload.DataPlatformDispatch("ORDER_CREATED", "ORD-1");
+
+		when(outboxService.claim(4L)).thenReturn(Optional.of(outboxEvent));
+		when(outboxPayloadMapper.read("{dataPlatform}", OutboxPayload.DataPlatformDispatch.class)).thenReturn(payload);
+
+		outboxDispatcherService.dispatchSingleEvent(4L);
+
+		verify(dataPlatformApplicationService).sendEventWithFailure(any());
+		verify(outboxService).complete(outboxEvent.getId());
+		verify(outboxService, never()).retry(anyLong(), anyString());
+	}
+
+	@Test
+	@DisplayName("ORDER_STATUS_SYNC CONFIRMED + 주문 상품 없음이면 이벤트 발행을 건너뛴다")
+	void dispatchSingleEvent_confirmed_skipsPublishWhenNoOrderItems() {
+		OutboxEvent outboxEvent = outboxEvent(OutboxEventType.ORDER_STATUS_SYNC, "{confirmed}");
+		OutboxPayload.OrderStatusSync payload = new OutboxPayload.OrderStatusSync("ORD-1", OrderStatus.CONFIRMED);
+
+		when(outboxService.claim(5L)).thenReturn(Optional.of(outboxEvent));
+		when(outboxPayloadMapper.read("{confirmed}", OutboxPayload.OrderStatusSync.class)).thenReturn(payload);
+		when(orderService.getOrderItems("ORD-1")).thenReturn(List.of());
+
+		outboxDispatcherService.dispatchSingleEvent(5L);
+
+		verify(orderService).updateOrderStatus("ORD-1", OrderStatus.CONFIRMED);
+		verify(eventPublisher, never()).publish(any());
+		verify(outboxService).complete(outboxEvent.getId());
+	}
+
+	@Test
+	@DisplayName("ORDER_STATUS_SYNC CONFIRMED면 중복 상품을 제거해 PRODUCT_ORDERED 이벤트를 발행한다")
+	void dispatchSingleEvent_confirmed_publishesUniqueProductEvents() {
+		OutboxEvent outboxEvent = outboxEvent(OutboxEventType.ORDER_STATUS_SYNC, "{confirmed}");
+		OutboxPayload.OrderStatusSync payload = new OutboxPayload.OrderStatusSync("ORD-1", OrderStatus.CONFIRMED);
+		List<OrderItem> orderItems = List.of(
+			orderItem("ORD-1", 10L, 1L),
+			orderItem("ORD-1", 10L, 2L),
+			orderItem("ORD-1", 20L, 1L)
+		);
+
+		when(outboxService.claim(6L)).thenReturn(Optional.of(outboxEvent));
+		when(outboxPayloadMapper.read("{confirmed}", OutboxPayload.OrderStatusSync.class)).thenReturn(payload);
+		when(orderService.getOrderItems("ORD-1")).thenReturn(orderItems);
+
+		outboxDispatcherService.dispatchSingleEvent(6L);
+
+		verify(eventPublisher, times(2)).publish(any());
+		verify(outboxService).complete(outboxEvent.getId());
+	}
+
+	@Test
+	@DisplayName("ORDER_STATUS_SYNC CANCELLED + 주문 상품 없음이면 재고 복구/캐시 무효화를 건너뛴다")
+	void dispatchSingleEvent_cancelled_skipsStockRestoreWhenNoOrderItems() {
+		OutboxEvent outboxEvent = outboxEvent(OutboxEventType.ORDER_STATUS_SYNC, "{cancelled-empty}");
+		OutboxPayload.OrderStatusSync payload = new OutboxPayload.OrderStatusSync("ORD-1", OrderStatus.CANCELLED);
+		OrderData.CompensationInfo compensationInfo = new OrderData.CompensationInfo("user1", 1000L, null);
+
+		when(outboxService.claim(7L)).thenReturn(Optional.of(outboxEvent));
+		when(outboxPayloadMapper.read("{cancelled-empty}", OutboxPayload.OrderStatusSync.class)).thenReturn(payload);
+		when(orderService.getOrderItems("ORD-1")).thenReturn(List.of());
+		when(orderService.getCompensationInfo("ORD-1")).thenReturn(compensationInfo);
+
+		outboxDispatcherService.dispatchSingleEvent(7L);
+
+		verify(productStockService, never()).restoreStock(anyList());
+		verify(productCacheInvalidationService, never()).evictProductRelatedCaches(any());
+		verify(pointService).refund(any(), any());
+		verify(couponService, never()).restoreCoupon(anyLong());
+		verify(outboxService).complete(outboxEvent.getId());
+	}
+
+	@Test
+	@DisplayName("ORDER_STATUS_SYNC CANCELLED면 재고/포인트/쿠폰 복구를 수행한다")
+	void dispatchSingleEvent_cancelled_restoresStockPointAndCoupon() {
+		OutboxEvent outboxEvent = outboxEvent(OutboxEventType.ORDER_STATUS_SYNC, "{cancelled}");
+		OutboxPayload.OrderStatusSync payload = new OutboxPayload.OrderStatusSync("ORD-1", OrderStatus.CANCELLED);
+		List<OrderItem> orderItems = List.of(
+			orderItem("ORD-1", 10L, 1L),
+			orderItem("ORD-1", 20L, 2L),
+			orderItem("ORD-1", 10L, 3L)
+		);
+		OrderData.CompensationInfo compensationInfo = new OrderData.CompensationInfo("user1", 15000L, 77L);
+
+		when(outboxService.claim(8L)).thenReturn(Optional.of(outboxEvent));
+		when(outboxPayloadMapper.read("{cancelled}", OutboxPayload.OrderStatusSync.class)).thenReturn(payload);
+		when(orderService.getOrderItems("ORD-1")).thenReturn(orderItems);
+		when(orderService.getCompensationInfo("ORD-1")).thenReturn(compensationInfo);
+
+		outboxDispatcherService.dispatchSingleEvent(8L);
+
+		verify(productStockService).restoreStock(orderItems);
+		verify(productCacheInvalidationService).evictProductRelatedCaches(ProductId.of(10L));
+		verify(productCacheInvalidationService).evictProductRelatedCaches(ProductId.of(20L));
+		verify(pointService).refund(any(), any());
+		verify(couponService).restoreCoupon(77L);
+		verify(outboxService).complete(outboxEvent.getId());
+		verify(outboxService, never()).retry(anyLong(), anyString());
+	}
+
 	private OutboxEvent outboxEvent(final OutboxEventType eventType, final String payload) {
 		return OutboxEvent.create()
 			.eventType(eventType)
@@ -126,6 +264,15 @@ class OutboxDispatcherServiceTest {
 			.status(OutboxStatus.PENDING)
 			.retryCount(0)
 			.nextRetryAt(LocalDateTime.now().minusSeconds(1))
+			.build();
+	}
+
+	private OrderItem orderItem(final String orderId, final Long productId, final Long quantity) {
+		return OrderItem.builder()
+			.orderId(new OrderId(orderId))
+			.productId(ProductId.of(productId))
+			.quantity(new Quantity(quantity))
+			.price(new Price(1000L))
 			.build();
 	}
 }

@@ -39,7 +39,7 @@ class CouponServiceTest {
 		CouponRepository couponRepository = mock(CouponRepository.class);
 		CouponService couponService = new CouponService(couponRepository);
 		Long couponId = 1L;
-		when(couponRepository.findByIdWithPessimisticLock(couponId)).thenReturn(Optional.empty());
+		when(couponRepository.findByIdWithOptimisticLock(couponId)).thenReturn(Optional.empty());
 
 		// act
 		CoreException result = assertThrows(
@@ -62,7 +62,7 @@ class CouponServiceTest {
 		TotalOrderPrice totalOrderPrice = new TotalOrderPrice(1000L);
 		CouponDiscountAmount expected = CouponDiscountAmount.of(100L);
 
-		when(couponRepository.findByIdWithPessimisticLock(couponId)).thenReturn(Optional.of(coupon));
+		when(couponRepository.findByIdWithOptimisticLock(couponId)).thenReturn(Optional.of(coupon));
 		when(coupon.applyDiscount(totalOrderPrice)).thenReturn(expected);
 		when(couponRepository.save(coupon)).thenReturn(coupon);
 
