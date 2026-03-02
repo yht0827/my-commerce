@@ -38,7 +38,7 @@ export const options = {
     summaryTrendStats: SUMMARY_TREND_STATS,
     thresholds: {
         http_req_failed: ['rate<0.15'],
-        http_req_duration: ['p(95)<2500', 'p(99)<4000'],
+        http_req_duration: ['p(95)<1500', 'p(99)<2000'],
         order_success_rate: ['rate>0.75'],
         order_conflict_rate: ['rate<0.25'],
         order_server_error_rate: ['rate<0.05'],
