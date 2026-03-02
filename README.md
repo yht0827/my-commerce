@@ -12,15 +12,11 @@
 - [설계 문서](#설계-문서)
 - [시작하기](#시작하기)
 
----
-
 ## 프로젝트 소개
 
 DDD와 클린 아키텍처를 연습하기 위해 만든 멀티모듈 E-Commerce 플랫폼입니다.
 
 단순한 CRUD를 넘어 실제 서비스에서 마주치는 동시성, 트랜잭션 정합성, 성능 문제를 직접 설계하고 구현하는 데 초점을 맞췄습니다.
-
----
 
 ## 기술 스택
 
@@ -35,8 +31,6 @@ DDD와 클린 아키텍처를 연습하기 위해 만든 멀티모듈 E-Commerce
 | Test | JUnit 5, AssertJ, Testcontainers, Instancio |
 | Load Test | k6 |
 | Monitoring | Prometheus, Grafana |
-
----
 
 ## 핵심 구현 포인트
 
@@ -97,8 +91,6 @@ CANCELLED 감지
 - 쿠폰 사용: Optimistic Lock (`@Version`)
 - 포인트 차감: Pessimistic Lock
 
----
-
 ## 시스템 아키텍처
 
 ```
@@ -114,8 +106,6 @@ CANCELLED 감지
         └────────────┘  │  Ranking)   │  └─────────┘
                         └─────────────┘
 ```
-
----
 
 ## 모듈 구조
 
@@ -144,16 +134,12 @@ Root
     └── 📦 monitoring          # 모니터링
 ```
 
----
-
 ## 설계 문서
 
 - [01 Requirements](docs/01-requirements.md)
 - [02 Sequence Diagrams](docs/02-sequence-diagrams.md)
 - [03 Class Diagrams](docs/03-class-diagrams.md)
 - [04 ERD](docs/04-erd.md)
-
----
 
 ## 시작하기
 
