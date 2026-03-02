@@ -1,0 +1,23 @@
+### ==========================================
+### 랭킹 API (Ranking)
+### ==========================================
+
+### 일간 랭킹 조회 - 오늘 기준
+GET {{commerce-api}}/api/v1/rankings?type=DAILY
+X-USER-ID: orderuser1
+
+### 일간 랭킹 조회 - 특정 날짜
+GET {{commerce-api}}/api/v1/rankings?type=DAILY&date=20260303
+X-USER-ID: orderuser1
+
+### 주간 랭킹 조회
+GET {{commerce-api}}/api/v1/rankings?type=WEEKLY
+X-USER-ID: orderuser1
+
+### 월간 랭킹 조회
+GET {{commerce-api}}/api/v1/rankings?type=MONTHLY
+X-USER-ID: orderuser1
+
+### 일간 랭킹 조회 - 페이징
+GET {{commerce-api}}/api/v1/rankings?type=DAILY&page=0&size=10
+X-USER-ID: orderuser1

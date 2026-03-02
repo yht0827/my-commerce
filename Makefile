@@ -5,10 +5,6 @@ COMPOSE_FILE := docker/docker-compose.yml
 
 DC := docker compose -p $(PROJECT) -f $(COMPOSE_FILE)
 
-# 기존 분리된 compose로 올라간 컨테이너 정리용 (마이그레이션 1회용)
-LEGACY_INFRA := docker compose -f docker/infra-compose.yml
-LEGACY_MON   := docker compose -f docker/monitoring-compose.yml
-
 .PHONY: help up down restart ps logs preclean-legacy
 
 help:
@@ -34,7 +30,3 @@ ps:
 
 logs:
 	$(DC) logs -f
-
-preclean-legacy:
-	-$(LEGACY_MON) down --remove-orphans
-	-$(LEGACY_INFRA) down --remove-orphans
