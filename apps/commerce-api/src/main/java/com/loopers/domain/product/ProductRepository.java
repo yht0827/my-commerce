@@ -11,6 +11,8 @@ import com.loopers.domain.brand.BrandId;
 public interface ProductRepository {
 	Optional<ProductInfo> findById(final ProductId id);
 
+	Optional<Product> findEntityById(final ProductId id);
+
 	Optional<Product> findByIdWithPessimisticLock(ProductId id);
 
 	Optional<Product> findByIdWithOptimisticLock(ProductId id);

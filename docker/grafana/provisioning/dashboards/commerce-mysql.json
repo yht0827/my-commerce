@@ -25,20 +25,7 @@
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 10
-              }
-            ]
-          },
-          "unit": "percent"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -60,18 +47,31 @@
       },
       "targets": [
         {
-          "expr": "100 * sum(rate(http_server_requests_seconds_count{application=\"commerce-api\",uri=\"/api/v1/orders\",method=\"POST\",status=~\"409|429\"}[5m])) / clamp_min(sum(rate(http_server_requests_seconds_count{application=\"commerce-api\",uri=\"/api/v1/orders\",method=\"POST\"}[5m])), 1e-9)",
-          "legendFormat": "conflict rate",
+          "expr": "rate(mysql_global_status_queries{instance=\"mysqld-exporter:9104\"}[1m])",
+          "legendFormat": "queries/s",
           "refId": "A"
         }
       ],
-      "title": "Conflict Rate (409/429)",
+      "title": "MySQL QPS",
       "type": "timeseries"
     },
     {
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
+            ]
+          },
           "unit": "short"
         },
         "overrides": []
@@ -94,18 +94,31 @@
       },
       "targets": [
         {
-          "expr": "hikaricp_connections_active{application=\"commerce-api\",pool=\"mysql-main-pool\"}",
-          "legendFormat": "active",
+          "expr": "rate(mysql_global_status_slow_queries{instance=\"mysqld-exporter:9104\"}[5m])",
+          "legendFormat": "slow queries/s",
           "refId": "A"
         }
       ],
-      "title": "Hikari Active Connections",
+      "title": "Slow Queries Rate",
       "type": "timeseries"
     },
     {
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
           "unit": "short"
         },
         "overrides": []
@@ -128,31 +141,18 @@
       },
       "targets": [
         {
-          "expr": "hikaricp_connections_pending{application=\"commerce-api\",pool=\"mysql-main-pool\"}",
-          "legendFormat": "pending",
+          "expr": "rate(mysql_global_status_innodb_row_lock_waits{instance=\"mysqld-exporter:9104\"}[5m])",
+          "legendFormat": "lock waits/s",
           "refId": "A"
         }
       ],
-      "title": "Hikari Pending Connections",
+      "title": "InnoDB Row Lock Waits",
       "type": "timeseries"
     },
     {
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 0
-              }
-            ]
-          },
           "unit": "short"
         },
         "overrides": []
@@ -175,12 +175,22 @@
       },
       "targets": [
         {
-          "expr": "increase(hikaricp_connections_timeout_total{application=\"commerce-api\",pool=\"mysql-main-pool\"}[5m])",
-          "legendFormat": "timeouts",
+          "expr": "mysql_global_status_threads_connected{instance=\"mysqld-exporter:9104\"}",
+          "legendFormat": "connected",
           "refId": "A"
+        },
+        {
+          "expr": "mysql_global_status_threads_running{instance=\"mysqld-exporter:9104\"}",
+          "legendFormat": "running",
+          "refId": "B"
+        },
+        {
+          "expr": "mysql_global_variables_max_connections{instance=\"mysqld-exporter:9104\"}",
+          "legendFormat": "max",
+          "refId": "C"
         }
       ],
-      "title": "Hikari Timeout Increase (5m)",
+      "title": "MySQL Connections",
       "type": "timeseries"
     },
     {
@@ -191,16 +201,20 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "red",
                 "value": null
               },
               {
-                "color": "red",
-                "value": 50
+                "color": "yellow",
+                "value": 95
+              },
+              {
+                "color": "green",
+                "value": 99
               }
             ]
           },
-          "unit": "ms"
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -222,63 +236,12 @@
       },
       "targets": [
         {
-          "expr": "1000 * rate(hikaricp_connections_acquire_seconds_sum{application=\"commerce-api\",pool=\"mysql-main-pool\"}[5m]) / clamp_min(rate(hikaricp_connections_acquire_seconds_count{application=\"commerce-api\",pool=\"mysql-main-pool\"}[5m]), 1e-9)",
-          "legendFormat": "acquire avg",
+          "expr": "100 * (1 - rate(mysql_global_status_innodb_buffer_pool_reads{instance=\"mysqld-exporter:9104\"}[5m]) / clamp_min(rate(mysql_global_status_innodb_buffer_pool_read_requests{instance=\"mysqld-exporter:9104\"}[5m]), 1e-9))",
+          "legendFormat": "buffer pool hit ratio",
           "refId": "A"
         }
       ],
-      "title": "Hikari Acquire Avg",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 70
-              },
-              {
-                "color": "red",
-                "value": 90
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 16
-      },
-      "id": 6,
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "expr": "100 * hikaricp_connections_active{application=\"commerce-api\",pool=\"mysql-main-pool\"} / clamp_min(hikaricp_connections_max{application=\"commerce-api\",pool=\"mysql-main-pool\"}, 1)",
-          "legendFormat": "pool usage %",
-          "refId": "A"
-        }
-      ],
-      "title": "HikariCP Pool Usage %",
+      "title": "InnoDB Buffer Pool Hit Ratio",
       "type": "timeseries"
     }
   ],
@@ -287,9 +250,8 @@
   "style": "dark",
   "tags": [
     "commerce",
-    "order",
-    "db",
-    "lock"
+    "mysql",
+    "db"
   ],
   "templating": {
     "list": []
@@ -300,8 +262,8 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Commerce API - Lock & DB Pressure",
-  "uid": "commerce-lock-db",
+  "title": "Commerce - MySQL",
+  "uid": "commerce-mysql",
   "version": 1,
   "weekStart": ""
 }

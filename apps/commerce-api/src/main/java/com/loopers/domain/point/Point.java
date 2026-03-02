@@ -6,6 +6,7 @@ import com.loopers.domain.user.UserId;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,6 +23,9 @@ public class Point extends BaseEntity {
 
 	@Embedded
 	private Balance balance;
+
+	@Version
+	private Long version;
 
 	@Builder(builderMethodName = "create")
 	public Point(final UserId userId, final Balance balance) {

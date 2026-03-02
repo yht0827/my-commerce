@@ -25,20 +25,7 @@
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "percent"
+          "unit": "bytes"
         },
         "overrides": []
       },
@@ -60,12 +47,12 @@
       },
       "targets": [
         {
-          "expr": "100 * process_cpu_usage{application=\"commerce-api\"}",
-          "legendFormat": "process cpu",
+          "expr": "redis_memory_used_bytes{instance=\"redis-exporter:9121\"}",
+          "legendFormat": "used memory",
           "refId": "A"
         }
       ],
-      "title": "Process CPU",
+      "title": "Redis Memory Used",
       "type": "timeseries"
     },
     {
@@ -80,12 +67,16 @@
                 "value": null
               },
               {
+                "color": "yellow",
+                "value": 1.5
+              },
+              {
                 "color": "red",
-                "value": 90
+                "value": 2.0
               }
             ]
           },
-          "unit": "percent"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -107,12 +98,12 @@
       },
       "targets": [
         {
-          "expr": "100 * system_cpu_usage{application=\"commerce-api\"}",
-          "legendFormat": "system cpu",
+          "expr": "redis_mem_fragmentation_ratio{instance=\"redis-exporter:9121\"}",
+          "legendFormat": "fragmentation ratio",
           "refId": "A"
         }
       ],
-      "title": "System CPU",
+      "title": "Memory Fragmentation Ratio",
       "type": "timeseries"
     },
     {
@@ -128,11 +119,11 @@
               },
               {
                 "color": "red",
-                "value": 85
+                "value": 1
               }
             ]
           },
-          "unit": "percent"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -154,19 +145,36 @@
       },
       "targets": [
         {
-          "expr": "100 * sum(jvm_memory_used_bytes{application=\"commerce-api\",area=\"heap\"}) / clamp_min(sum(jvm_memory_max_bytes{application=\"commerce-api\",area=\"heap\"}), 1)",
-          "legendFormat": "heap usage",
+          "expr": "rate(redis_evicted_keys_total{instance=\"redis-exporter:9121\"}[5m])",
+          "legendFormat": "evictions/s",
           "refId": "A"
         }
       ],
-      "title": "Heap Usage",
+      "title": "Evicted Keys Rate",
       "type": "timeseries"
     },
     {
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
-          "unit": "ms"
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "green",
+                "value": 95
+              }
+            ]
+          },
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -188,12 +196,12 @@
       },
       "targets": [
         {
-          "expr": "1000 * rate(jvm_gc_pause_seconds_sum{application=\"commerce-api\"}[5m]) / clamp_min(rate(jvm_gc_pause_seconds_count{application=\"commerce-api\"}[5m]), 1e-9)",
-          "legendFormat": "gc avg pause",
+          "expr": "rate(redis_keyspace_hits_total{instance=\"redis-exporter:9121\"}[5m]) / clamp_min(rate(redis_keyspace_hits_total{instance=\"redis-exporter:9121\"}[5m]) + rate(redis_keyspace_misses_total{instance=\"redis-exporter:9121\"}[5m]), 1e-9) * 100",
+          "legendFormat": "hit ratio %",
           "refId": "A"
         }
       ],
-      "title": "GC Pause Avg",
+      "title": "Redis Hit Ratio (Native)",
       "type": "timeseries"
     },
     {
@@ -222,12 +230,12 @@
       },
       "targets": [
         {
-          "expr": "jvm_threads_live_threads{application=\"commerce-api\"}",
-          "legendFormat": "live threads",
+          "expr": "redis_connected_clients{instance=\"redis-exporter:9121\"}",
+          "legendFormat": "connected clients",
           "refId": "A"
         }
       ],
-      "title": "Live Threads",
+      "title": "Connected Clients",
       "type": "timeseries"
     },
     {
@@ -240,7 +248,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 8,
+        "w": 24,
         "x": 0,
         "y": 16
       },
@@ -256,108 +264,12 @@
       },
       "targets": [
         {
-          "expr": "rate(jvm_gc_pause_seconds_count{application=\"commerce-api\",cause!~\".*Old.*|.*Full.*\"}[1m])",
-          "legendFormat": "minor gc/s",
+          "expr": "rate(redis_commands_total{instance=\"redis-exporter:9121\"}[1m])",
+          "legendFormat": "{{cmd}}",
           "refId": "A"
         }
       ],
-      "title": "Minor GC Count Rate",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 0.1
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 16
-      },
-      "id": 7,
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "expr": "rate(jvm_gc_pause_seconds_count{application=\"commerce-api\",cause=~\".*Old.*|.*Full.*\"}[1m])",
-          "legendFormat": "full gc/s",
-          "refId": "A"
-        }
-      ],
-      "title": "Full GC Count Rate",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 16
-      },
-      "id": 8,
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "targets": [
-        {
-          "expr": "jvm_threads_states_threads{application=\"commerce-api\",state=\"blocked\"}",
-          "legendFormat": "blocked",
-          "refId": "A"
-        },
-        {
-          "expr": "jvm_threads_states_threads{application=\"commerce-api\",state=\"waiting\"}",
-          "legendFormat": "waiting",
-          "refId": "B"
-        },
-        {
-          "expr": "jvm_threads_states_threads{application=\"commerce-api\",state=\"timed-waiting\"}",
-          "legendFormat": "timed-waiting",
-          "refId": "C"
-        },
-        {
-          "expr": "jvm_threads_states_threads{application=\"commerce-api\",state=\"runnable\"}",
-          "legendFormat": "runnable",
-          "refId": "D"
-        }
-      ],
-      "title": "Thread States",
+      "title": "Redis Commands Rate",
       "type": "timeseries"
     }
   ],
@@ -366,8 +278,8 @@
   "style": "dark",
   "tags": [
     "commerce",
-    "runtime",
-    "jvm"
+    "redis",
+    "cache"
   ],
   "templating": {
     "list": []
@@ -378,8 +290,8 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Commerce API - Runtime Health",
-  "uid": "commerce-runtime-health",
+  "title": "Commerce - Redis",
+  "uid": "commerce-redis",
   "version": 1,
   "weekStart": ""
 }

@@ -6,6 +6,7 @@ plugins {
 
 dependencies {
     api("org.springframework.boot:spring-boot-starter-data-redis")
+    api("org.redisson:redisson:3.27.2")
 
     testFixturesImplementation("com.redis:testcontainers-redis")
 }

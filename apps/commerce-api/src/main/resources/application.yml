@@ -47,6 +47,11 @@ cache:
     product: v1
     brand: v1
 
+app:
+  lock:
+    mode: pessimistic  # pessimistic | optimistic | distributed | double-defense
+    optimistic-retry-count: 3
+
 springdoc:
   use-fqn: true
   swagger-ui:

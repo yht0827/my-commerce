@@ -20,3 +20,25 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
+
+  mysqld-exporter:
+    image: prom/mysqld-exporter
+    container_name: mysqld-exporter
+    ports:
+      - "9104:9104"
+    environment:
+      - DATA_SOURCE_NAME=root:1234@(host.docker.internal:3306)/
+    command:
+      - --mysqld.address=host.docker.internal:3306
+      - --mysqld.username=root
+      - --collect.global_status
+      - --collect.info_schema.innodb_metrics
+      - --collect.info_schema.processlist
+
+  redis-exporter:
+    image: oliver006/redis_exporter
+    container_name: redis-exporter
+    ports:
+      - "9121:9121"
+    environment:
+      - REDIS_ADDR=redis://host.docker.internal:6379

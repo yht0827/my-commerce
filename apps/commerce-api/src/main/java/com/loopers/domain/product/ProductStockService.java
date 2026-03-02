@@ -5,10 +5,17 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
-import org.springframework.transaction.annotation.Transactional;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import com.loopers.config.lock.LockProperties;
 import com.loopers.domain.common.Quantity;
 import com.loopers.domain.order.OrderData;
 import com.loopers.domain.order.OrderItem;
@@ -17,12 +24,16 @@ import com.loopers.support.error.ErrorMessage;
 import com.loopers.support.error.ErrorType;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProductStockService {
 
 	private final ProductRepository productRepository;
+	private final RedissonClient redissonClient;
+	private final LockProperties lockProperties;
 
 	@Transactional
 	public void restoreStock(final List<OrderItem> orderItems) {
@@ -64,22 +75,87 @@ public class ProductStockService {
 	}
 
 	private ProductData.StockQuantityChanged deductStockItem(final StockDeductionItem item) {
-		ProductId productId = item.productId();
-		Product product = findProductWithPessimisticLock(productId);
-		long oldQuantity = product.getQuantity().getQuantity();
+		return switch (lockProperties.mode()) {
+			case PESSIMISTIC -> deductWithPessimistic(item);
+			case OPTIMISTIC -> deductWithOptimistic(item);
+			case DISTRIBUTED -> deductWithDistributed(item);
+			case DOUBLE_DEFENSE -> deductWithDoubleDefense(item);
+		};
+	}
 
+	private ProductData.StockQuantityChanged deductWithPessimistic(final StockDeductionItem item) {
+		Product product = findProductWithPessimisticLock(item.productId());
+		return doDeduct(product, item);
+	}
+
+	private ProductData.StockQuantityChanged deductWithOptimistic(final StockDeductionItem item) {
+		int maxRetry = lockProperties.optimisticRetryCount();
+		for (int attempt = 0; attempt < maxRetry; attempt++) {
+			try {
+				Product product = findProductWithOptimisticLock(item.productId());
+				return doDeduct(product, item);
+			} catch (ObjectOptimisticLockingFailureException e) {
+				log.debug("Optimistic lock conflict on stock deduction, attempt={}/{}", attempt + 1, maxRetry);
+				if (attempt == maxRetry - 1) {
+					throw new CoreException(ErrorType.CONFLICT, ErrorMessage.STOCK_CONFLICT.format(item.productId().getProductId()));
+				}
+			}
+		}
+		throw new CoreException(ErrorType.CONFLICT, ErrorMessage.STOCK_CONFLICT.format(item.productId().getProductId()));
+	}
+
+	private ProductData.StockQuantityChanged deductWithDistributed(final StockDeductionItem item) {
+		String lockKey = "lock:stock:" + item.productId().getProductId();
+		RLock lock = redissonClient.getLock(lockKey);
+		lock.lock(10, TimeUnit.SECONDS);
+		registerUnlockAfterCommit(lock);
+		Product product = findProduct(item.productId());
+		return doDeduct(product, item);
+	}
+
+	private ProductData.StockQuantityChanged deductWithDoubleDefense(final StockDeductionItem item) {
+		String lockKey = "lock:stock:" + item.productId().getProductId();
+		RLock lock = redissonClient.getLock(lockKey);
+		lock.lock(10, TimeUnit.SECONDS);
+		registerUnlockAfterCommit(lock);
+		Product product = findProductWithOptimisticLock(item.productId());
+		return doDeduct(product, item);
+	}
+
+	private ProductData.StockQuantityChanged doDeduct(final Product product, final StockDeductionItem item) {
+		long oldQuantity = product.getQuantity().getQuantity();
 		product.deduct(item.quantity());
 		return new ProductData.StockQuantityChanged(
-			productId.getProductId(),
+			item.productId().getProductId(),
 			oldQuantity,
 			product.getQuantity().getQuantity()
 		);
 	}
 
+	private void registerUnlockAfterCommit(final RLock lock) {
+		TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+			@Override
+			public void afterCompletion(int status) {
+				if (lock.isHeldByCurrentThread()) {
+					lock.unlock();
+				}
+			}
+		});
+	}
+
+	private Product findProduct(final ProductId productId) {
+		return productRepository.findEntityById(productId)
+			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, ErrorMessage.PRODUCT_NOT_FOUND.format(productId.getProductId())));
+	}
+
 	private Product findProductWithPessimisticLock(final ProductId productId) {
 		return productRepository.findByIdWithPessimisticLock(productId)
-			.orElseThrow(
-				() -> new CoreException(ErrorType.NOT_FOUND, ErrorMessage.PRODUCT_NOT_FOUND.format(productId.getProductId())));
+			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, ErrorMessage.PRODUCT_NOT_FOUND.format(productId.getProductId())));
+	}
+
+	private Product findProductWithOptimisticLock(final ProductId productId) {
+		return productRepository.findByIdWithOptimisticLock(productId)
+			.orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, ErrorMessage.PRODUCT_NOT_FOUND.format(productId.getProductId())));
 	}
 
 	private List<StockDeductionItem> normalizeOrderItemsForStockDeduction(final List<OrderData.OrderItemData> orderItems) {
@@ -111,5 +187,4 @@ public class ProductStockService {
 
 	private record StockDeductionItem(ProductId productId, Quantity quantity) {
 	}
-
 }

@@ -1,0 +1,338 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 10,
+      "title": "Latency 비교 (k6 order_create_duration)",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": { "unit": "ms" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 1 },
+      "id": 1,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(k6_order_create_duration_bucket{lock_mode=\"pessimistic\"}[2m])))",
+          "legendFormat": "pessimistic",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(k6_order_create_duration_bucket{lock_mode=\"optimistic\"}[2m])))",
+          "legendFormat": "optimistic",
+          "refId": "B"
+        }
+      ],
+      "title": "p95 Latency 비교",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 1000 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 1 },
+      "id": 2,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(k6_order_create_duration_bucket{lock_mode=\"pessimistic\"}[2m])))",
+          "legendFormat": "pessimistic",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(k6_order_create_duration_bucket{lock_mode=\"optimistic\"}[2m])))",
+          "legendFormat": "optimistic",
+          "refId": "B"
+        }
+      ],
+      "title": "p99 Latency 비교",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 2000 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 1 },
+      "id": 3,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.999, sum by (le) (rate(k6_order_create_duration_bucket{lock_mode=\"pessimistic\"}[2m])))",
+          "legendFormat": "pessimistic",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.999, sum by (le) (rate(k6_order_create_duration_bucket{lock_mode=\"optimistic\"}[2m])))",
+          "legendFormat": "optimistic",
+          "refId": "B"
+        }
+      ],
+      "title": "p99.9 Latency 비교",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+      "id": 11,
+      "title": "성공/실패율 비교",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.75 },
+              { "color": "green", "value": 0.95 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+      "id": 4,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "expr": "rate(k6_order_success_rate_total{lock_mode=\"pessimistic\"}[2m]) / clamp_min(rate(k6_order_success_rate_total[2m]) + rate(k6_order_success_rate_fails[2m]), 1e-9)",
+          "legendFormat": "pessimistic",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(k6_order_success_rate_total{lock_mode=\"optimistic\"}[2m]) / clamp_min(rate(k6_order_success_rate_total[2m]) + rate(k6_order_success_rate_fails[2m]), 1e-9)",
+          "legendFormat": "optimistic",
+          "refId": "B"
+        }
+      ],
+      "title": "주문 성공률 비교",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.1 },
+              { "color": "red", "value": 0.25 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+      "id": 5,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "expr": "rate(k6_order_conflict_rate_total{lock_mode=\"pessimistic\"}[2m]) / clamp_min(rate(k6_order_conflict_rate_total[2m]) + rate(k6_order_conflict_rate_fails[2m]), 1e-9)",
+          "legendFormat": "pessimistic",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(k6_order_conflict_rate_total{lock_mode=\"optimistic\"}[2m]) / clamp_min(rate(k6_order_conflict_rate_total[2m]) + rate(k6_order_conflict_rate_fails[2m]), 1e-9)",
+          "legendFormat": "optimistic",
+          "refId": "B"
+        }
+      ],
+      "title": "충돌률(409/429) 비교",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "id": 12,
+      "title": "처리량 및 DB 압박",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": { "unit": "reqps" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 19 },
+      "id": 6,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(k6_http_reqs_total{lock_mode=\"pessimistic\"}[1m]))",
+          "legendFormat": "pessimistic RPS",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(k6_http_reqs_total{lock_mode=\"optimistic\"}[1m]))",
+          "legendFormat": "optimistic RPS",
+          "refId": "B"
+        }
+      ],
+      "title": "처리량(RPS) 비교",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 19 },
+      "id": 7,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "expr": "hikaricp_connections_pending{application=\"commerce-api\",pool=\"mysql-main-pool\"}",
+          "legendFormat": "pending connections",
+          "refId": "A"
+        },
+        {
+          "expr": "hikaricp_connections_active{application=\"commerce-api\",pool=\"mysql-main-pool\"}",
+          "legendFormat": "active connections",
+          "refId": "B"
+        }
+      ],
+      "title": "HikariCP 상태 (테스트 중)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 27 },
+      "id": 8,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "expr": "rate(mysql_global_status_innodb_row_lock_waits{instance=\"mysqld-exporter:9104\"}[1m])",
+          "legendFormat": "InnoDB lock waits/s",
+          "refId": "A"
+        }
+      ],
+      "title": "InnoDB Row Lock Waits (테스트 중)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 27 },
+      "id": 9,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "expr": "jvm_threads_states_threads{application=\"commerce-api\",state=\"blocked\"}",
+          "legendFormat": "blocked threads",
+          "refId": "A"
+        },
+        {
+          "expr": "jvm_threads_states_threads{application=\"commerce-api\",state=\"waiting\"}",
+          "legendFormat": "waiting threads",
+          "refId": "B"
+        }
+      ],
+      "title": "Thread 상태 (테스트 중)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["commerce", "lock", "comparison", "k6"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Commerce - Lock Strategy Comparison",
+  "uid": "commerce-lock-comparison",
+  "version": 1,
+  "weekStart": ""
+}

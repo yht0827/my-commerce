@@ -56,7 +56,9 @@ public enum ErrorMessage {
 	POINT_BALANCE_INVALID("포인트 금액은 %d보다 커야 합니다."),
 	ORDER_IDEMPOTENCY_KEY_REQUIRED("멱등성 키는 비어있을 수 없습니다."),
 	ORDER_IDEMPOTENCY_KEY_TOO_LONG("멱등성 키는 %d자 이하여야 합니다."),
-	ORDER_IDEMPOTENCY_KEY_IN_PROGRESS("동일 멱등성 키 요청이 처리 중입니다.");
+	ORDER_IDEMPOTENCY_KEY_IN_PROGRESS("동일 멱등성 키 요청이 처리 중입니다."),
+	STOCK_CONFLICT("상품 ID '%s'의 재고 차감 중 충돌이 발생했습니다."),
+	POINT_CONFLICT("사용자 ID '%s'의 포인트 차감 중 충돌이 발생했습니다.");
 
 	private final String message;
 

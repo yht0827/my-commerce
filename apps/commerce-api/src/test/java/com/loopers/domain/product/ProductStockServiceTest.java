@@ -13,6 +13,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import org.redisson.api.RedissonClient;
+
+import com.loopers.config.lock.LockMode;
+import com.loopers.config.lock.LockProperties;
 import com.loopers.domain.brand.BrandId;
 import com.loopers.domain.common.Price;
 import com.loopers.domain.common.Quantity;
@@ -26,7 +30,9 @@ import com.loopers.support.error.ErrorType;
 class ProductStockServiceTest {
 
 	private final ProductRepository productRepository = mock(ProductRepository.class);
-	private final ProductStockService productStockService = new ProductStockService(productRepository);
+	private final RedissonClient redissonClient = mock(RedissonClient.class);
+	private final LockProperties lockProperties = new LockProperties(LockMode.PESSIMISTIC, 3);
+	private final ProductStockService productStockService = new ProductStockService(productRepository, redissonClient, lockProperties);
 
 	private Product createProduct(long quantity, ProductStatus status) {
 		return Product.builder()

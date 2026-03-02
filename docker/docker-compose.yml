@@ -1,0 +1,175 @@
+services:
+  # ── Infrastructure ──────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_USER=application
+      - MYSQL_PASSWORD=application
+      - MYSQL_DATABASE=loopers
+      - MYSQL_CHARACTER_SET=utf8mb4
+      - MYSQL_COLLATE=utf8mb4_0900_ai_ci
+    volumes:
+      - mysql-8-data:/var/lib/mysql
+
+  pg-simulator:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_USER=application
+      - MYSQL_PASSWORD=application
+      - MYSQL_DATABASE=paymentgateway
+      - MYSQL_CHARACTER_SET=utf8mb4
+      - MYSQL_COLLATE=utf8mb4_0900_ai_ci
+    volumes:
+      - pg-simulator-data:/var/lib/mysql
+
+  redis-master:
+    image: redis:7.0
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_master_data:/data
+    command:
+      [
+        "redis-server",
+        "--appendonly", "yes",
+        "--save", "",
+        "--latency-monitor-threshold", "100",
+      ]
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-p", "6379", "PING" ]
+      interval: 5s
+      timeout: 2s
+      retries: 10
+
+  redis-readonly:
+    image: redis:7.0
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_readonly_data:/data
+    command:
+      [
+        "redis-server",
+        "--appendonly", "yes",
+        "--appendfsync", "everysec",
+        "--replicaof", "redis-master", "6379",
+        "--replica-read-only", "yes",
+        "--latency-monitor-threshold", "100",
+      ]
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-p", "6379", "PING" ]
+      interval: 5s
+      timeout: 2s
+      retries: 10
+
+  kafka:
+    image: bitnami/kafka:3.5.1
+    ports:
+      - "9092:9092"
+      - "19092:19092"
+    environment:
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,PLAINTEXT_HOST://:19092,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:19092
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=1
+    volumes:
+      - kafka-data:/bitnami/kafka
+    healthcheck:
+      test: [ "CMD", "bash", "-c", "kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "9090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+
+  # ── Exporters ───────────────────────────────────────────────
+  mysqld-exporter:
+    image: prom/mysqld-exporter
+    container_name: mysqld-exporter
+    depends_on:
+      - mysql
+    ports:
+      - "9104:9104"
+    environment:
+      - DATA_SOURCE_NAME=root:root@(mysql:3306)/
+    command:
+      - --mysqld.address=mysql:3306
+      - --mysqld.username=root
+      - --collect.global_status
+      - --collect.info_schema.innodb_metrics
+      - --collect.info_schema.processlist
+
+  redis-exporter:
+    image: oliver006/redis_exporter
+    container_name: redis-exporter
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    ports:
+      - "9121:9121"
+    environment:
+      - REDIS_ADDR=redis://redis-master:6379
+
+  # ── Monitoring ──────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus
+    depends_on:
+      - mysqld-exporter
+      - redis-exporter
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./grafana/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+
+  grafana:
+    image: grafana/grafana
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/provisioning/alerting:/etc/grafana/provisioning/alerting
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+
+volumes:
+  mysql-8-data:
+  pg-simulator-data:
+  redis_master_data:
+  redis_readonly_data:
+  kafka-data:
+
+networks:
+  default:
+    driver: bridge

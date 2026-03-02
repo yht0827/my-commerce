@@ -51,6 +51,11 @@ public class ProductRepositoryImpl implements ProductRepository {
 	}
 
 	@Override
+	public Optional<Product> findEntityById(final ProductId id) {
+		return productJpaRepository.findById(id.getProductId());
+	}
+
+	@Override
 	public Optional<Product> findByIdWithPessimisticLock(final ProductId id) {
 		return productJpaRepository.findByIdWithPessimisticLock(id.getProductId());
 	}

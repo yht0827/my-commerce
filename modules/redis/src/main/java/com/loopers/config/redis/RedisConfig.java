@@ -113,4 +113,14 @@ public class RedisConfig {
 		template.setConnectionFactory(defaultRedisConnectionFactory);
 		return template;
 	}
+
+	@Bean
+	public org.redisson.api.RedissonClient redissonClient() {
+		org.redisson.config.Config config = new org.redisson.config.Config();
+		RedisNodeInfo master = redisProperties.master();
+		config.useSingleServer()
+			.setAddress("redis://" + master.host() + ":" + master.port())
+			.setDatabase(redisProperties.database());
+		return org.redisson.Redisson.create(config);
+	}
 }

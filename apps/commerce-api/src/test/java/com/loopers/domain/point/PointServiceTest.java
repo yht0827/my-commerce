@@ -11,6 +11,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import org.redisson.api.RedissonClient;
+
+import com.loopers.config.lock.LockMode;
+import com.loopers.config.lock.LockProperties;
 import com.loopers.domain.user.UserId;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -20,13 +24,17 @@ class PointServiceTest {
 
 	private PointRepository pointRepository;
 	private PointHistoryRepository pointHistoryRepository;
+	private RedissonClient redissonClient;
+	private LockProperties lockProperties;
 	private PointService pointService;
 
 	@BeforeEach
 	void setUp() {
 		pointRepository = mock(PointRepository.class);
 		pointHistoryRepository = mock(PointHistoryRepository.class);
-		pointService = new PointService(pointRepository, pointHistoryRepository);
+		redissonClient = mock(RedissonClient.class);
+		lockProperties = new LockProperties(LockMode.PESSIMISTIC, 3);
+		pointService = new PointService(pointRepository, pointHistoryRepository, redissonClient, lockProperties);
 	}
 
 	@DisplayName("charge 메서드")
